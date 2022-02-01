@@ -45,6 +45,10 @@ function read_Fct_Commod()
 	
 end
 
+function read_Affinity()
+	file = instance * "\\Affinity.txt"
+	return readdlm(file, ' ')
+end
 
 function read_instance(name::String, num::Int)
 	instance = "instances\\" * instance * "\\" instance * "_" * num
@@ -52,6 +56,6 @@ function read_instance(name::String, num::Int)
 	nb_commodities, Source, Destination, Bandwidth, Latency = read_Commodity(instance)
 	nb_functions, capacities, cost_by_node = read_Functions(instance)
 	orders = read_Fct_Commod(instance)
-	
+	affinity = read_Affinity(instance)
 	
 end

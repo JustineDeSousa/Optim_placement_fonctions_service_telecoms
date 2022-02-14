@@ -1,6 +1,3 @@
-include("header.jl")
-using CPLEX
-using JuMP
 
 m = Model(CPLEX.Optimizer)
 inst = Instance(true) #true si inst test
@@ -24,8 +21,6 @@ t = [ inst.commod[k,2] for k in 1:K ] #t[k] = noeud arrivée client k
 function succ(node::Int)
 	return [inst.graph[arc,2] for arc in 1:nb_arcs if inst.graph[arc,1] == node]
 end
-
-
 function prec(node::Int)
 	return [inst.graph[arc,1] for arc in 1:nb_arcs if inst.graph[arc,2] == node]
 end
@@ -41,8 +36,6 @@ latence = @constraint(m, [k in 1:K], base_name="latence_max",
 	sum( sum( inst.graph[arc,5]*x[inst.graph[arc,1],inst.graph[arc,2],k,c] for arc in 1:nb_arcs) for c in 1:C[k]) <= inst.commod[k,4] )
 capa_function = @constraint(m, [f in 1:F, i in 1:n], base_name="capa_funct_f_i",
 	sum( sum( x[i,i,k,c] for c in 1:C[k])*inst.commod[k,3] for k in 1:K) <= inst.functions[f,1]*y[f,i])
-
-
 
 function capa_N(node::Int)
 	index = findfirst(x->x==node, inst.graph[:,1:2])
@@ -82,4 +75,3 @@ for k in 1:K
 		println(solution)
 	end
 end
-

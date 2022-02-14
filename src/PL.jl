@@ -4,6 +4,7 @@ using JuMP
 model = Model(CPLEX.Optimizer)
 
 """
+K : nombre de clients
 n : nombre de sommets
 m : nombre d'arcs
 F : nombre de fonctions

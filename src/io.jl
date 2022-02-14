@@ -3,6 +3,7 @@
 mutable struct Data
     N::Int64 # the number of vertices
     M::Int64 # the number of arcs
+    Adjacent::BitArray{2} 
     LatencyMat::Array{Float64, 2} # matrix latency [u, v, latency]
     CapacityNode::Array{Int64,1} # capacity *functions* of each vertex
     CostNode::Array{Int64,1} # openning cost of each vertex
@@ -15,6 +16,7 @@ mutable struct Data
     CostFun::Array{Int64, 2} # cost of fun on node u = CostFun[fun, u]
 
     Order::Array{Array{Int64,1},1} # Order[k] : the list of functions ordered for commodity k
+    Layer::Array{Int64,1} # the number of layers of each commodity
 
     Affinity::Array{Array{Int64,1},1} # Affinity[k] : the list of functions exclusive for commodity k
 
@@ -34,6 +36,7 @@ mutable struct Data
         N = parse(Int64, split(readline(datafile), " ")[2])
         CapacityNode = [0 for _ in 1:N]
         CostNode = [0 for _ in 1:N]
+        Adjacent = falses(N, N)
 
         M = parse(Int64, split(readline(datafile), " ")[2])
         data = readlines(datafile)
@@ -44,6 +47,7 @@ mutable struct Data
             line = split(eachLine, " ")
             u = parse(Int64, line[1]) + 1
             v = parse(Int64, line[2]) + 1
+            Adjacent[u, v] = true
 
             if CapacityNode[u] == 0
                 CapacityNode[u] = parse(Int64, line[3])
@@ -109,6 +113,7 @@ mutable struct Data
         # reading "Fct_commod.txt"
         # ------------------------
         Order = [[] for _ in 1:K]
+        Layer = [0 for _ in 1:K]
         datafile = open(instance * "Fct_commod.txt")
         data = readlines(datafile)
         close(datafile)
@@ -118,6 +123,7 @@ mutable struct Data
             line = split(eachLine, " ")
             l = size(line, 1)
             Order[k] = [parse(Int64, line[i])+1 for i in 1:l]
+            Layer[k] = l
             k +=1
         end
 
@@ -144,7 +150,7 @@ mutable struct Data
         end
 
 
-        new(N, M, LatencyMat, CapacityNode, CostNode, K, Commodidty, F, CapacityFun, CostFun, Order, Affinity)
+        new(N, M, Adjacent, LatencyMat, CapacityNode, CostNode, K, Commodidty, F, CapacityFun, CostFun, Order, Layer, Affinity)
     end
 
 end

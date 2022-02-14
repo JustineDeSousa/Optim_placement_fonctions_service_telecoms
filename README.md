@@ -1,5 +1,5 @@
 # Optim_placement_fonctions_service_telecoms
- 
+ This project os collaborated by Justine, Natalia and Yue.
 
 
 

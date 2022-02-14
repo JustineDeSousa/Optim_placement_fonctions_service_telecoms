@@ -12,7 +12,6 @@ function cplexSolveMIP(data::Data)
     # variable
     @variable(M, x[i=1:data.N, j=1:data.N, k=1:data.K, c=1:data.Layer[k]], Bin)
     @variable(M, y[1:data.F, 1:data.N] >= 0, Int)
-    @variable(M, v[1:data.F, 1:data.N], Bin)
     @variable(M, u[1:data.N], Bin)
 
     # objective function
@@ -98,6 +97,7 @@ function cplexSolveMIP(data::Data)
 
     # solve the problem
     optimize!(M)
+    println(solution_summary(M))
 
     exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     

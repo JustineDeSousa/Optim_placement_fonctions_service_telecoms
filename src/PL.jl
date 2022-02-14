@@ -23,9 +23,13 @@ t = [ inst.commod[k,2] for k in 1:K ] #t[k] = noeud arrivée client k
 function succ(node::Int)
 	return [inst.graph[arc,2] for arc in 1:nb_arcs if inst.graph[arc,1] == node]
 end
+
+
 function prec(node::Int)
 	return [inst.graph[arc,1] for arc in 1:nb_arcs if inst.graph[arc,2] == node]
 end
+
+
 @constraint(m, [k in 1:K], base_name="Conserv_s",
 	sum( sum( x[s[k],j,k,c] for j in succ(s[k])) - sum( x[j, s[k],k,c] for j in prec(s[k]) ) for c in 1:C[k]) == 1)
 @constraint(m, [k in 1:K], base_name="Conserv_t",
@@ -39,10 +43,14 @@ end
 @constraint(m, [i in 1:n, f in 1:F], base_name="capa_funct_i_f",
 	sum( sum( x[i,i,k,c] for c in 1:C[k])*inst.commod[k,3] for k in 1:K) <= inst.functions[f]*y[f,i])
 
+
+
 function capa_N(node::Int)
 	index = findfirst(x->x==node, inst.graph[:,1:2])
 	return inst.graph[index[1], index[2]+2]
 end
+
+
 @constraint(m, [i in 1:n], base_name="capa_noeud", sum(  y[f,i] for f in 1:F ) <= capa_N(i) )
 
 #Variables d'installation des fonctions

@@ -1,10 +1,9 @@
  # HEADER
 using DelimitedFiles
 
-
 mutable struct Instance
 	#ATTRIBUTS	
-	graph::Matrix{Int} # Une ligne par arc: (noeud départ, noeud arrivée, capaN départ, capaN arrivée, latence)
+	graph::Matrix{Int} # Une ligne par arc: (noeud départ, noeud arrivée, capaN départ, capaN arrivée, latence, cout d'ouverture noeud1)
 	commod::Matrix{Int} # Une ligne par commodité: (noeud départ, noeud arrivée, qté données, latence max)
 	functions::Matrix{Int} # Une ligne par fonction: (capacité, coûts de placement en chaque noeud)
 	orders::Matrix{Int} # Une ligne par comomodité:fonctions dans l'odre dans lequel elles doivent être executées
@@ -33,5 +32,3 @@ mutable struct Instance
 	end
 
 end
-instance = "../instances_test/test_";
-inst = Instance(true)

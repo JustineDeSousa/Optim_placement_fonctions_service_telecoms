@@ -1,6 +1,3 @@
-include("header.jl")
-using CPLEX
-using JuMP
 
 m = Model(CPLEX.Optimizer)
 inst = Instance(true) #true si inst test
@@ -78,4 +75,3 @@ for k in 1:K
 		println(solution)
 	end
 end
-

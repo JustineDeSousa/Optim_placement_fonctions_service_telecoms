@@ -9,7 +9,7 @@ mutable struct Data
     CostNode::Array{Int64,1} # openning cost of each vertex
 
     K::Int64 # the number of Commodidties
-    Commodidty::Array{Float64, 2} #[s, t, flux, latencyMax]
+    Commodity::Array{Float64, 2} #[s, t, flux, latencyMax]
 
     F::Int64 # the number of functions
     CapacityFun::Array{Int64,1} # capacity *flux* of each function
@@ -88,7 +88,7 @@ mutable struct Data
 
             s = parse(Int64, line[1]) + 1
             t = parse(Int64, line[2]) + 1
-            Commodidty = vcat(Commodidty, [s t round(Int, parse(Float64, line[3])) parse(Float64, line[4])])
+            Commodity = vcat(Commodity, [s t round(Int, parse(Float64, line[3])) parse(Float64, line[4])])
             
         end
 
@@ -178,7 +178,7 @@ mutable struct Data
         end
 
 
-        new(N, M, Adjacent, LatencyMat, CapacityNode, CostNode, K, Commodidty, F, CapacityFun, CostFun, Order, Layer, Affinity)
+        new(N, M, Adjacent, LatencyMat, CapacityNode, CostNode, K, Commodity, F, CapacityFun, CostFun, Order, Layer, Affinity)
     end
 
 end

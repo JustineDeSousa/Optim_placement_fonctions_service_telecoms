@@ -3,8 +3,9 @@
 mutable struct Data
     N::Int64 # the number of vertices
     M::Int64 # the number of arcs
-    Adjacent::BitArray{2} 
+    Adjacent::BitArray{2}
     LatencyMat::Array{Float64, 2} # matrix latency [u, v, latency]
+	Latency::Array{Float64, 2} # Latency[u,v] = l_{uv}
     CapacityNode::Array{Int64,1} # capacity *functions* of each vertex
     CostNode::Array{Int64,1} # openning cost of each vertex
 
@@ -43,6 +44,7 @@ mutable struct Data
         data = readlines(datafile)
         close(datafile)
         LatencyMat = Array{Float64, 2}(undef, 0, 3)
+		Latency = zeros(N,N)
 
         for eachLine in data
             line = split(eachLine, " ")
@@ -56,7 +58,7 @@ mutable struct Data
             u = parse(Int64, line[1]) + 1
             v = parse(Int64, line[2]) + 1
             Adjacent[u, v] = true
-
+			
             if CapacityNode[u] == 0
                 CapacityNode[u] = parse(Int64, line[3])
             end
@@ -66,7 +68,8 @@ mutable struct Data
             end
             
             LatencyMat = vcat(LatencyMat, [u v parse(Float64, line[5])])
-
+			Latency[u,v] = parse(Float64, line[5])
+			
             if CostNode[u] == 0
                 CostNode[u] = parse(Int64, line[6])
             end

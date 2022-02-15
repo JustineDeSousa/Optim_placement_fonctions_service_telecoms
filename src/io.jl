@@ -121,7 +121,13 @@ mutable struct Data
         k = 1
         for eachLine in data
             line = split(eachLine, " ")
+            # println(line)
             l = size(line, 1)
+            if line[l] == "" || line[l] == " "
+                pop!(line)
+                l -= 1
+            end
+
             Order[k] = [parse(Int64, line[i])+1 for i in 1:l]
             Layer[k] = l
             k +=1

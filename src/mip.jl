@@ -28,11 +28,11 @@ function cplexSolveMIP(data::Data)
 
         # conversation flux at s
         @constraint(M, sum(sum(x[s, j, k, c] for j in 1:data.N if data.Adjacent[s, j]) - 
-            sum(x[j, s, k, c] for j in 1:data.N if data.Adjacent[j, s]) for c in data.Layer[k]) == 1)
+            sum(x[j, s, k, c] for j in 1:data.N if data.Adjacent[j, s]) for c in 1:data.Layer[k]) == 1)
 
         # conversation flux at t
         @constraint(M, sum(sum(x[t, j, k, c] for j in 1:data.N if data.Adjacent[t, j]) - 
-            sum(x[j, t, k, c] for j in 1:data.N if data.Adjacent[j, t]) for c in data.Layer[k]) == -1)
+            sum(x[j, t, k, c] for j in 1:data.N if data.Adjacent[j, t]) for c in 1:data.Layer[k]) == -1)
 
         # conversation flux at each node
         for i in 1:data.N
@@ -40,7 +40,38 @@ function cplexSolveMIP(data::Data)
                 continue
             end
             @constraint(M, sum(sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in data.Layer[k]) == 0)
+                sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
+        end
+
+
+        # # for each layer flux conversation
+        # for c in 1:data.Layer[k]
+
+        #     # incomming - outgoing = x_ii
+        #     for i in 1:data.N
+        #         if i == s || i == t
+        #             continue
+        #         end
+        #         @constraint(M, sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
+        #             sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) == x[i, i, k, c])
+        #     end
+        # end
+
+
+        for i in 1:data.N
+            # if i == t
+            #     continue
+            # end
+            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
+                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+        end
+
+        for i in 1:data.N
+            # if i == s
+            #     continue
+            # end
+            @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
+                sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
         end
 
     end
@@ -53,18 +84,31 @@ function cplexSolveMIP(data::Data)
 
 
     #TODO : for each layer, jump at most one vertex
+    function lay(k::Int64,f::Int64, data::Data)
+        for i in 1:data.Layer[k]
+            # println(data.Order[k][i])
+            # println("f",f)
+            if f==data.Order[k][i]
+                # println("---------")
+                return i
+            end
+        end
+
+        return data.Layer[k]+1
+    end
+
 
     # constraint function capacitiy
-    @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k])
+    @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k] if c==lay(k,f,data))
         * round(Int, data.Commodidty[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
     
     # constraint machine capacity
-    #@constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
+    @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
 
 
     # constraint of variable u
-    @constraint(M, [i in 1:data.N], u[i] <= sum(y[f, i] for f in data.F))
-    @constraint(M, [i in 1:data.N], u[i] * data.CapacityNode[i] >= sum(y[f, i] for f in data.F))
+    @constraint(M, [i in 1:data.N], u[i] <= sum(y[f, i] for f in 1:data.F))
+    @constraint(M, [i in 1:data.N], u[i] * data.CapacityNode[i] >= sum(y[f, i] for f in 1:data.F)) # 
 
 
     # exclusive constraint
@@ -117,8 +161,18 @@ function cplexSolveMIP(data::Data)
         best_bound = objective_bound(M)
 
         println("obj_val = ", obj_val)
-        println("best_bound = ", best_bound)
-        println("GAP = ", GAP)
+        # println("best_bound = ", best_bound)
+        # println("GAP = ", GAP)
+
+        for k in 1:data.K
+            println("Client ", k, " : ")
+            for c in 1:data.Layer[k]
+                print("\tCouche ", c, " -> ")
+                solution = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i,j,k,c]) > TOL ]
+                println(solution)
+            end
+        end
+        println("y = ", value.(y))
 
     end
 

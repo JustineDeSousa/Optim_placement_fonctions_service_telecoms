@@ -25,9 +25,10 @@ mutable struct Data
         if small_test
             instance = dir * name * "/" * name * "_"
         else
-            instance = dir * name * "/" * name * "_" * num * "/"
+            instance = dir * name * "/" * name * "_$num" * "/"
         end
         
+        println("reading ", instance)
         # ---------------------
         # reading "Graph.txt"
         # ---------------------
@@ -45,6 +46,13 @@ mutable struct Data
 
         for eachLine in data
             line = split(eachLine, " ")
+            for i in 1:size(line, 1)
+                if line[i] == ""
+                    splice!(line, i)
+                    break
+                end
+            end
+
             u = parse(Int64, line[1]) + 1
             v = parse(Int64, line[2]) + 1
             Adjacent[u, v] = true
@@ -77,9 +85,10 @@ mutable struct Data
 
         for eachLine in data
             line = split(eachLine, " ")
+
             s = parse(Int64, line[1]) + 1
             t = parse(Int64, line[2]) + 1
-            Commodidty = vcat(Commodidty, [s t parse(Int64, line[3]) parse(Float64, line[4])])
+            Commodidty = vcat(Commodidty, [s t round(Int, parse(Float64, line[3])) parse(Float64, line[4])])
             
         end
 
@@ -121,7 +130,13 @@ mutable struct Data
         k = 1
         for eachLine in data
             line = split(eachLine, " ")
+            # println(line)
             l = size(line, 1)
+            if line[l] == "" || line[l] == " "
+                pop!(line)
+                l -= 1
+            end
+
             Order[k] = [parse(Int64, line[i])+1 for i in 1:l]
             Layer[k] = l
             k +=1
@@ -140,6 +155,19 @@ mutable struct Data
         for eachLine in data
             k +=1
             line = split(eachLine, " ")
+            l = size(line, 1)
+            for i in 1:l
+                for s in 1:size(line, 1)
+                    if line[s] == "" 
+                        splice!(line, s)
+                        break
+                    end
+                end
+                if size(line, 1) <1
+                    break
+                end
+            end
+
             l = size(line, 1)
 
             if l <= 1

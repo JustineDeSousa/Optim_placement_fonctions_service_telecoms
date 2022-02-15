@@ -5,6 +5,33 @@ include("io.jl")
 TOL = 0.00001
 
 
+# function tryconf()
+#     model = Model(CPLEX.Optimizer)  # You must use a solver that supports conflict refining/IIS
+#     # computation, like CPLEX or Gurobi
+#     # for example, using Gurobi; model = Model(Gurobi.Optimizer)
+#     @variable(model, x >= 0)
+#     @constraint(model, c1, x >= 2)
+#     @constraint(model, c2, x <= 1)
+#     optimize!(model)
+
+#     # termination_status(model) will likely be INFEASIBLE,
+#     # depending on the solver
+
+#     compute_conflict!(model)
+
+#     conflict_constraint_list = ConstraintRef[]
+#     for (F, S) in list_of_constraint_types(model)
+#         for con in all_constraints(model, F, S)
+#             if MOI.get(model, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
+#                 push!(conflict_constraint_list, con)
+#                 println(con)
+#             end
+#         end
+#     end
+
+# end
+
+
 function cplexSolveMIP(data::Data)
     # modelization
     M = Model(CPLEX.Optimizer) 
@@ -47,10 +74,10 @@ function cplexSolveMIP(data::Data)
         # flux conversation at each layer
         # -----------------------------------------
 
-        for i in 1:data.N
-            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
-        end
+        # for i in 1:data.N
+        #     @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
+        #         sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+        # end
 
         # for i in 1:data.N
         #     if i == t
@@ -63,21 +90,21 @@ function cplexSolveMIP(data::Data)
         # end
 
 
-        for i in 1:data.N
-            @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
-                sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
-        end
+        # for i in 1:data.N
+        #     @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
+        #         sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
+        # end
 
-        for i in 1:data.N
-            if i == s
-                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
-                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
-            else
-                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) == 
-                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1] )
-            end
+        # for i in 1:data.N
+        #     if i == s
+        #         @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
+        #             sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
+        #     else
+        #         @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) == 
+        #             sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1] )
+        #     end
             
-        end
+        # end
 
 
     end
@@ -147,7 +174,7 @@ function cplexSolveMIP(data::Data)
 
     # solve the problem
     optimize!(M)
-    println(solution_summary(M))
+    # println(solution_summary(M))
 
     exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     
@@ -160,6 +187,9 @@ function cplexSolveMIP(data::Data)
     # display solution
     println("isOptimal ? ", isOptimal)
     println("solveTime = ", solveTime)
+
+    # 
+    compute_conflict!(M)
 
     if has_values(M)
         GAP = MOI.get(M, MOI.RelativeGap())
@@ -180,6 +210,18 @@ function cplexSolveMIP(data::Data)
         end
         println("y = ", value.(y))
 
+    elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
+        conflict_constraint_list = ConstraintRef[]
+        for (F, S) in list_of_constraint_types(M)
+            for con in all_constraints(M, F, S)
+                if MOI.get(M, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
+                    push!(conflict_constraint_list, con)
+                    println(con)
+                end
+            end
+        end
+
+        error("No conflict could be found for an infeasible model.")
     end
 
 

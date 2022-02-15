@@ -50,8 +50,8 @@ function cplexSolveMIP(data::Data)
     # flux constraints
     # ------------------
     for k in 1:data.K
-        s = round(Int, data.Commodidty[k, 1])
-        t = round(Int, data.Commodidty[k, 2])
+        s = round(Int, data.Commodity[k, 1])
+        t = round(Int, data.Commodity[k, 2])
 
         # conversation flux at s
         @constraint(M, sum(sum(x[s, j, k, c] for j in 1:data.N if data.Adjacent[s, j]) - 
@@ -112,7 +112,7 @@ function cplexSolveMIP(data::Data)
 
     # constraint maximal latency 
     @constraint(M, [k in 1:data.K], sum( sum(data.LatencyMat[a, 3] * x[round(Int, data.LatencyMat[a, 1]), round(Int, data.LatencyMat[a, 2]), k, c]
-    for a in 1:data.M) for c in 1:data.Layer[k] ) <= data.Commodidty[k, 4])
+    for a in 1:data.M) for c in 1:data.Layer[k] ) <= data.Commodity[k, 4])
     
 
 
@@ -133,7 +133,7 @@ function cplexSolveMIP(data::Data)
 
     # constraint function capacitiy
     @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k] if c==lay(k,f,data))
-        * round(Int, data.Commodidty[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
+        * round(Int, data.Commodity[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
     
     # constraint machine capacity
     @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])

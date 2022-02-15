@@ -76,7 +76,7 @@ mutable struct Data
         # ---------------------
         # reading "Commodity.txt"
         # ---------------------
-        Commodidty = Array{Float64, 2}(undef, 0, 4) #TODO : category
+        Commodity = Array{Float64, 2}(undef, 0, 4) #TODO : category
         datafile = open(instance * "Commodity.txt")
         readline(datafile)
         K = parse(Int64, split(readline(datafile), " ")[2])

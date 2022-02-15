@@ -12,7 +12,6 @@ function cplexSolveMIP(data::Data)
     # variable
     @variable(M, x[i=1:data.N, j=1:data.N, k=1:data.K, c=1:data.Layer[k]], Bin)
     @variable(M, y[1:data.F, 1:data.N] >= 0, Int)
-    #@variable(M, v[1:data.F, 1:data.N], Bin)
     @variable(M, u[1:data.N], Bin)
 
     # objective function
@@ -44,6 +43,43 @@ function cplexSolveMIP(data::Data)
                 sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
         end
 
+        # -----------------------------------------
+        # flux conversation at each layer
+        # -----------------------------------------
+
+        for i in 1:data.N
+            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
+                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+        end
+
+        # for i in 1:data.N
+        #     if i == t
+        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
+        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == -1 + x[i, i, k, data.Layer[k]])
+        #     else
+        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
+        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == x[i, i, k, data.Layer[k]])
+        #     end
+        # end
+
+
+        for i in 1:data.N
+            @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
+                sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
+        end
+
+        for i in 1:data.N
+            if i == s
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
+                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
+            else
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) == 
+                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1] )
+            end
+            
+        end
+
+
     end
 
 
@@ -56,15 +92,17 @@ function cplexSolveMIP(data::Data)
     #TODO : for each layer, jump at most one vertex
     function lay(k::Int64,f::Int64, data::Data)
         for i in 1:data.Layer[k]
-            println(data.Order[k][i])
-            println("f",f)
+            # println(data.Order[k][i])
+            # println("f",f)
             if f==data.Order[k][i]
-                println("---------")
+                # println("---------")
                 return i
             end
         end
+
         return data.Layer[k]+1
     end
+
 
     # constraint function capacitiy
     @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k] if c==lay(k,f,data))
@@ -76,7 +114,7 @@ function cplexSolveMIP(data::Data)
 
     # constraint of variable u
     @constraint(M, [i in 1:data.N], u[i] <= sum(y[f, i] for f in 1:data.F))
-    @constraint(M, [i in 1:data.N], u[i] * 10000000 >= sum(y[f, i] for f in 1:data.F))
+    @constraint(M, [i in 1:data.N], u[i] * data.CapacityNode[i] >= sum(y[f, i] for f in 1:data.F)) # 
 
 
     # exclusive constraint
@@ -109,6 +147,7 @@ function cplexSolveMIP(data::Data)
 
     # solve the problem
     optimize!(M)
+    #println(solution_summary(M))
 
     #exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     
@@ -129,13 +168,14 @@ function cplexSolveMIP(data::Data)
         best_bound = objective_bound(M)
 
         println("obj_val = ", obj_val)
-        println("best_bound = ", best_bound)
-        println("GAP = ", GAP)
+        # println("best_bound = ", best_bound)
+        # println("GAP = ", GAP)
+
         for k in 1:data.K
             println("Client ", k, " : ")
             for c in 1:data.Layer[k]
                 print("\tCouche ", c, " -> ")
-                solution = [(i,j) for i in 1:n, j in 1:n if value(x[i,j,k,c]) > 0 ]
+                solution = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i,j,k,c]) > TOL ]
                 println(solution)
             end
         end

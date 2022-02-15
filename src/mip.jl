@@ -43,36 +43,42 @@ function cplexSolveMIP(data::Data)
                 sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
         end
 
+        # -----------------------------------------
+        # flux conversation at each layer
+        # -----------------------------------------
 
-        # # for each layer flux conversation
-        # for c in 1:data.Layer[k]
+        for i in 1:data.N
+            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
+                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+        end
 
-        #     # incomming - outgoing = x_ii
-        #     for i in 1:data.N
-        #         if i == s || i == t
-        #             continue
-        #         end
-        #         @constraint(M, sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
-        #             sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) == x[i, i, k, c])
+        # for i in 1:data.N
+        #     if i == t
+        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
+        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == -1 + x[i, i, k, data.Layer[k]])
+        #     else
+        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
+        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == x[i, i, k, data.Layer[k]])
         #     end
         # end
 
 
         for i in 1:data.N
-            # if i == t
-            #     continue
-            # end
-            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
-        end
-
-        for i in 1:data.N
-            # if i == s
-            #     continue
-            # end
             @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
                 sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
         end
+
+        for i in 1:data.N
+            if i == s
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
+                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
+            else
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) == 
+                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1] )
+            end
+            
+        end
+
 
     end
 

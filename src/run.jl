@@ -1,6 +1,5 @@
 using CPLEX 
 using JuMP
-
 include("mip.jl")
 
 function test1()

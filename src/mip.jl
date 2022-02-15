@@ -71,7 +71,7 @@ function cplexSolveMIP(data::Data)
         end
 
         # -----------------------------------------
-        # flux conversation at each layer
+        # flux conservation at each layer
         # -----------------------------------------
 
         for i in 1:data.N
@@ -168,7 +168,7 @@ function cplexSolveMIP(data::Data)
     end
     
     # for each layer, at least one function is installed
-    @constraint(M, [k in 1:data.K, c in 1:data.Layer[k]], sum(x[i, i, k, c] for i in 1:data.N) >= 1)
+    @constraint(M, [k in 1:data.K, c in 1:data.Layer[k]], sum(x[i, i, k, c] for i in 1:data.N) == 1)
 
 
 
@@ -176,7 +176,7 @@ function cplexSolveMIP(data::Data)
     optimize!(M)
     # println(solution_summary(M))
 
-    exploredNodes = MOI.get(backend(M), MOI.NodeCount())
+    #exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     
     solveTime = MOI.get(M, MOI.SolveTime())
 

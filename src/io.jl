@@ -181,7 +181,7 @@ mutable struct Data
         end
 
 
-        new(N, M, Adjacent, LatencyMat, CapacityNode, CostNode, K, Commodity, F, CapacityFun, CostFun, Order, Layer, Affinity)
+        new(N, M, Adjacent, LatencyMat, Latency, CapacityNode, CostNode, K, Commodity, F, CapacityFun, CostFun, Order, Layer, Affinity)
     end
 
 end

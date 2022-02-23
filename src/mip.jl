@@ -136,7 +136,7 @@ function cplexSolveMIP(data::Data)
         * round(Int, data.Commodity[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
     
     # constraint machine capacity
-    @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
+    # @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
 
 
     # constraint of variable u
@@ -171,10 +171,10 @@ function cplexSolveMIP(data::Data)
     @constraint(M, [k in 1:data.K, c in 1:data.Layer[k]], sum(x[i, i, k, c] for i in 1:data.N) == 1)
 
 
-
     # solve the problem
     optimize!(M)
-    # println(solution_summary(M))
+    # TODO : I'm not sure if this summary works for you
+    println(solution_summary(M))
 
     #exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     
@@ -188,17 +188,19 @@ function cplexSolveMIP(data::Data)
     println("isOptimal ? ", isOptimal)
     println("solveTime = ", solveTime)
 
-    # 
     compute_conflict!(M)
 
     if has_values(M)
         GAP = MOI.get(M, MOI.RelativeGap())
         obj_val = objective_value(M)
-        best_bound = objective_bound(M)
+        # best_bound = objective_bound(M)
 
         println("obj_val = ", obj_val)
         # println("best_bound = ", best_bound)
         # println("GAP = ", GAP)
+
+        commodities_path = [[] for _ in 1:data.K] # Array{Array{Tuple{Int64,Int64},1},1}()
+        fun_placement = zeros(Int64, data.F, data.N)
 
         for k in 1:data.K
             println("Client ", k, " : ")
@@ -207,8 +209,18 @@ function cplexSolveMIP(data::Data)
                 solution = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i,j,k,c]) > TOL ]
                 println(solution)
             end
+
+            commodities_path[k] = [(i, j) for c in 1:data.Layer[k], i in 1:data.N, j in 1:data.N if i != j && value(x[i,j,k,c]) > TOL]
+        end
+        for i in 1:data.F, j in 1:data.N
+            if JuMP.value(y[i, j]) > TOL
+                fun_placement[i, j] = round(Int, JuMP.value(y[i, j]))
+            end
         end
         println("y = ", value.(y))
+        
+        # check feasibility
+        verificationMIP(data, commodities_path, fun_placement)
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -224,5 +236,64 @@ function cplexSolveMIP(data::Data)
         error("No conflict could be found for an infeasible model.")
     end
 
+end
 
+
+
+function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fun_placement::Array{Int64,2})
+    # for each commodity, a valid path from s to t
+    println("commodities_path : ", commodities_path)
+    println("fun_placement : ", fun_placement)
+
+    if isConnectedComponent(commodities_path, data) == false
+        return false
+    end
+
+    # for i in 1:data.N
+        
+    # end
+
+end
+
+
+function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Data)
+    # for each Commodity
+    for k in 1:data.K
+        v = Set{Int64}()
+        sort!(commodities_path[k])
+        for (i, j) in commodities_path[k]
+            push!(v, i)
+            push!(v, j)
+        end
+        vertices = collect(v)
+        println("vertices : ", vertices)
+
+
+        isVisited = Dict(i=>false for i in vertices)
+        todo = []
+    
+        # pick up a source
+        s = round(Int, data.Commodity[k, 1])
+        append!(todo, s)
+
+        while size(todo, 1) >0
+            v = pop!(todo)
+            if ! isVisited[v] 
+                isVisited[v] = true
+                for u in vertices
+                    if data.Adjacent[v, u] && ! isVisited[u]
+                        append!(todo, u)
+                    end
+                end
+            end
+        end
+
+        for v in vertices
+            if ! isVisited[v]
+                return false
+            end
+        end
+
+    end
+    return true
 end

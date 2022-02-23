@@ -136,7 +136,7 @@ function cplexSolveMIP(data::Data)
         * round(Int, data.Commodity[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
     
     # constraint machine capacity
-    @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
+    # @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
 
 
     # constraint of variable u
@@ -245,38 +245,55 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
     println("commodities_path : ", commodities_path)
     println("fun_placement : ", fun_placement)
 
+    if isConnectedComponent(commodities_path, data) == false
+        return false
+    end
+
+    # for i in 1:data.N
+        
+    # end
+
 end
 
 
 function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Data)
     # for each Commodity
     for k in 1:data.K
-        
-    end
+        v = Set{Int64}()
+        sort!(commodities_path[k])
+        for (i, j) in commodities_path[k]
+            push!(v, i)
+            push!(v, j)
+        end
+        vertices = collect(v)
+        println("vertices : ", vertices)
 
-    isVisited = Dict(i=>false for i in vertices)
-    todo = []
 
-    # pick up a source
-    s = vertices[1]
-    append!(todo, s)
+        isVisited = Dict(i=>false for i in vertices)
+        todo = []
+    
+        # pick up a source
+        s = round(Int, data.Commodity[k, 1])
+        append!(todo, s)
 
-    while size(todo, 1) >0
-        v = pop!(todo)
-        if ! isVisited[v] 
-            isVisited[v] = true
-            for u in vertices
-                if graphCom[v, u] && ! isVisited[u]
-                    append!(todo, u)
+        while size(todo, 1) >0
+            v = pop!(todo)
+            if ! isVisited[v] 
+                isVisited[v] = true
+                for u in vertices
+                    if data.Adjacent[v, u] && ! isVisited[u]
+                        append!(todo, u)
+                    end
                 end
             end
         end
-    end
 
-    for v in vertices
-        if ! isVisited[v]
-            return false
+        for v in vertices
+            if ! isVisited[v]
+                return false
+            end
         end
+
     end
     return true
 end

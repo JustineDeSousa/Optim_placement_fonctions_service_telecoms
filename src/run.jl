@@ -1,39 +1,15 @@
-using CPLEX 
-using JuMP
-
-
 include("mip.jl")
-
-function test1()
-    dir = "../data/"
-
-    for file in readdir(dir)
-        path = dir * file
-
-        if isdir(path)
-
-            for subfile in readdir(path)
-                path = dir * file * subfile
-                println("path : ", path)
-                ss = split(subfile, "_")
-                name = String(ss[1])
-                num = parse(Int64, ss[2])
-                println("name : ", name, ", num : ", num)
-                global data = Data(dir, false, name, num) # reading function works
-            end
-        end
-    end
-
-end
+include("heuristic.jl")
 
 
 function test()
-    dir = "../small_data/"
-    global data = Data(dir, true, "test")
+    global data = Data("test", 1, true)
+    for k in 1:data.K
+        println("path commodity ", k, "  : ", find_path(data, k))
+    end
+    
+    #global data = Data("pdh", 1)
 
-    # dir = "../data/"
-    # global data = Data(dir, false, "pdh", 1)
-
-    cplexSolveMIP(data)
+    # cplexSolveMIP(data)
 end
 

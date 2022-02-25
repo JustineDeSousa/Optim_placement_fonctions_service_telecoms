@@ -20,19 +20,20 @@ mutable struct Data
     Layer::Array{Int64,1} # the number of layers of each commodity
 
     Affinity::Array{Array{Int64,1},1} # Affinity[k] : the list of functions exclusive for commodity k
-
+    # new(N, M, Adjacent, LatencyMat, Latency, CapacityNode, CostNode, K, Commodity, F, CapacityFun, CostFun, Order, Layer, Affinity)
     # Constructeur
-    function Data(dir::String, small_test::Bool=false, name::String="", num::Int=1)
+    function Data(name::String="", num::Int=1, small_test::Bool=false)
         if small_test
-            instance = dir * name * "/" * name * "_"
+            instance = "../small_data/" * name * "/" * name * "_"
         else
-            instance = dir * name * "/" * name * "_$num" * "/"
+            instance = "../data/" * name * "/" * name * "_$num" * "/"
         end
         
-        println("reading ", instance)
+        
         # ---------------------
         # reading "Graph.txt"
         # ---------------------
+        println("reading ", instance * "Graph.txt")
         datafile = open(instance * "Graph.txt")
         readline(datafile)
         N = parse(Int64, split(readline(datafile), " ")[2])
@@ -79,6 +80,7 @@ mutable struct Data
         # ---------------------
         # reading "Commodity.txt"
         # ---------------------
+        println("reading ", instance * "Commoodity.txt")
         Commodity = Array{Float64, 2}(undef, 0, 4) #TODO : category
         datafile = open(instance * "Commodity.txt")
         readline(datafile)
@@ -99,6 +101,7 @@ mutable struct Data
         # ------------------------
         # reading "Functions.txt"
         # ------------------------
+        println("reading ", instance * "Functions.txt")
         datafile = open(instance * "Functions.txt")
         readline(datafile)
         F = parse(Int64, split(readline(datafile), " ")[2])
@@ -124,6 +127,7 @@ mutable struct Data
         # ------------------------
         # reading "Fct_commod.txt"
         # ------------------------
+        println("reading ", instance * "Fct_commod.txt")
         Order = [[] for _ in 1:K]
         Layer = [0 for _ in 1:K]
         datafile = open(instance * "Fct_commod.txt")
@@ -149,6 +153,7 @@ mutable struct Data
         # ------------------------
         # reading "Affinity.txt"
         # ------------------------
+        println("reading ", instance * "Affinity.txt")
         Affinity = [[] for _ in 1:K]
         datafile = open(instance * "Affinity.txt")
         data = readlines(datafile)

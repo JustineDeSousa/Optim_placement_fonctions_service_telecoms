@@ -1,6 +1,7 @@
 # This file contains functions solving the multi-commodities problem using CPLEX solver
 include("io.jl")
-
+using CPLEX
+using JuMP
 
 TOL = 0.00001
 

@@ -92,3 +92,74 @@ function find_path(data::Data, k::Int, max_time::Float64=100.0)
 	return path
 end
 
+function isConflict(data::Data, f1::Int, f2::Int)
+	if f1 == f2
+		return false
+	end
+	for k in 1:data.K
+		if f1 in data.Affinity[k] && f2 in data.Affinity[k]
+			return true
+		end
+	end
+	return false
+end
+
+function isConflict(data::Data, functions_node::Vector{Int}, f::Int)
+	for fct in functions_node
+		if isConflict(data, f, fct)
+			return true
+		end
+	end
+	return false
+end
+
+function place_functions(data::Data, paths::Vector{Vector{Int}}, max_time::Float64=100.0)
+	startingTime = time()
+
+	# Liste des fonctions placées en chaque noeud, éventuellement plusieurs copies
+	functions = [ Int[] for _ in 1:data.N]
+
+	#Flux total à faire passer par la fonction f
+	flux = [ sum( data.Commodity[k,3]*(sum(data.Order[k].==f) > 0) for k in 1:data.K) for f in 1:data.F ]
+
+	#Number of functions that we need
+	nb_functions = [ ceil(Int, flux[f]/data.CapacityFun[f]) for f in 1:data.F ]
+	
+	#Nombre de fois qu'on passe par ce noeud
+	nb_path = [ sum(sum(paths[k].==node) for k in 1:data.K) for node in 1:data.N ]
+	
+	while sum(nb_functions) > 0 && time() - startingTime < max_time
+
+		f = findmax(nb_functions)[2] #Function that we need the most
+		node = findmax(nb_path)[2] #Sommet où on passe le plus
+
+		
+		while nb_functions[f] > 0 && time() - startingTime < max_time #While we still need the function
+			# println("node = ", node)
+			if data.CapacityNode[node] - length(functions[node]) > 0 #if not node_full
+				if !isConflict(data,functions[node],f) #if no conflict
+					push!(functions[node], f) #We place f at node
+					# println("functions[", node, "] = ", functions[node])
+					nb_functions[f] -= 1 #We need f one less time
+					# println("nb_functions : ", nb_functions)
+				else #conflict : next node
+					# println("conflict")
+					node = findmax(union(nb_path[1:node-1],nb_path[node+1:end]))
+				end
+			else #node_full
+				# println("node full")
+				nb_path[node] = 0 #We don't want to place function here anymore
+				node = findmax(nb_path)[2] 
+			end
+		end
+		
+	end
+
+	return functions
+end
+
+function init_solution(data::Data, max_time::Float64=100.0)
+	paths = [ find_path(data,k) for k in 1:data.K ]
+	return paths, place_functions(data, paths, max_time)
+end
+

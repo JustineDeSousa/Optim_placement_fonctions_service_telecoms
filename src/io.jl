@@ -20,7 +20,7 @@ mutable struct Data
     Layer::Array{Int64,1} # the number of layers of each commodity
 
     Affinity::Array{Array{Int64,1},1} # Affinity[k] : the list of functions exclusive for commodity k
-    # new(N, M, Adjacent, LatencyMat, Latency, CapacityNode, CostNode, K, Commodity, F, CapacityFun, CostFun, Order, Layer, Affinity)
+    
     # Constructeur
     function Data(name::String="", num::Int=1, small_test::Bool=false)
         if small_test

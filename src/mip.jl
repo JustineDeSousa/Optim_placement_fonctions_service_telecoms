@@ -108,22 +108,13 @@ function cplexSolveMIP(data::Data)
     
 
     function lay(k::Int64,f::Int64, data::Data)
-        for i in 1:data.Layer[k]
-            # println(data.Order[k][i])
-            # println("f",f)
-            if f==data.Order[k][i]
-                # println("---------")
-                return i
-            end
-        end
-
-        return data.Layer[k]+1
+        """ return a list of layers where f appears for commodity k"""
+        return [l for l in 1:data.Layer[k] if data.Order[k][l] == f]
     end
 
-
     # constraint function capacitiy
-    @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k] if c==lay(k,f,data))
-        * round(Int, data.Commodity[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
+    @constraint(M, [i in 1:data.N, f in 1:data.F], sum(x[i, i, k, c] * round(Int, data.Commodity[k, 3])
+        for k in 1:data.K, c in lay(k, f, data)) <= data.CapacityFun[f] * y[f, i])
     
     
     # constraint of variable u
@@ -189,6 +180,7 @@ function cplexSolveMIP(data::Data)
 
         commodities_path = [[] for _ in 1:data.K] # Array{Array{Tuple{Int64,Int64},1},1}()
         fun_placement = zeros(Int64, data.F, data.N)
+        commodities_jump = [[] for _ in 1:data.K]
 
         for k in 1:data.K
             println("Client ", k, " : ")
@@ -198,17 +190,23 @@ function cplexSolveMIP(data::Data)
                 println(solution)
             end
 
+            commodities_jump[k] = [i for i in 1:data.N, c in 1:data.Layer[k] if value(x[i, i, k, c]) > TOL]
+
             commodities_path[k] = [(i, j) for c in 1:data.Layer[k], i in 1:data.N, j in 1:data.N if i != j && value(x[i,j,k,c]) > TOL]
         end
+
+
         for i in 1:data.F, j in 1:data.N
             if JuMP.value(y[i, j]) > TOL
                 fun_placement[i, j] = round(Int, JuMP.value(y[i, j]))
             end
         end
-        println("y = ", value.(y))
+        println("fun_placement[:, 4] : ", value.(y[:, 4]))
+        # println("y = ", value.(y))
         
         # check feasibility
-        verificationMIP(data, commodities_path, fun_placement)
+        isFeasible = verificationMIP(data, commodities_path, fun_placement, commodities_jump)
+        println("isFeasible ? ", isFeasible)
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -227,23 +225,81 @@ function cplexSolveMIP(data::Data)
 end
 
 
+"""
+Return true if the solution MIP solved by CPLEX is feasible.
+"""
+function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fun_placement::Array{Int64,2}, commodities_jump::Array{Array{Any,1},1})
 
-function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fun_placement::Array{Int64,2})
-    # for each commodity, a valid path from s to t
+    # for each commodity, if there is a valid path from s to t
     println("commodities_path : ", commodities_path)
     println("fun_placement : ", fun_placement)
+    println("commodities_jump : ", commodities_jump)
 
     if isConnectedComponent(commodities_path, data) == false
+        error("Commodity path not valid !")
         return false
     end
 
-    # for i in 1:data.N
-        
-    # end
+    # maximal latency satisfied ?
+    for k in 1:data.K
+        acc_lat = 0
+        for (u, v) in commodities_path[k]
+            acc_lat += data.Latency[u, v]
+        end
+        if acc_lat > data.Commodity[k, 4]
+            error("maximal latency violated !")
+            return false
+        end
+    end
 
+    # node capacity satisfied ?
+    for i in 1:data.N
+        if sum(fun_placement[:, i]) > data.CapacityNode[i]
+            error("node capacity violated !")
+            return false
+        end
+    end
+
+    # function capacity satisfied ?
+    residual_capa = [sum(fun_placement[:, i] .* data.CapacityFun) for i in 1:data.N]
+    println("residual_capa : ", residual_capa)
+    println("fun_placement on 4 : ", fun_placement[:, 4])
+    for k in 1:data.K
+        if size(commodities_jump[k], 1) < size(data.Order[k], 1)
+            error("functions ordering violated ! ")
+            false
+        end
+        for v in commodities_jump[k]
+            residual_capa[v] -= data.Commodity[k, 3]
+            if residual_capa[v] < 0
+                println("commodities_jump[$k", "] : ", commodities_jump[k])
+                println("v : ", v, "residual_capa[v] = ", residual_capa[v])
+                error("functions capacity not sufficient for demand !")
+                return false
+            end
+        end
+    end
+
+    # Affinity verified ?
+    for k in 1:data.K
+        if size(data.Affinity[k], 1) < 2
+            continue
+        end
+        f = data.Affinity[k][1]
+        g = data.Affinity[k][2]
+        if commodities_jump[k][f] == commodities_jump[k][g]
+            error("Affinity violated by commodity $k")
+            return false
+        end
+    end
+    
+    return true
 end
 
 
+"""
+Return true, if each path P_k is vaild from s_k to t_k.
+"""
 function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Data)
     # for each Commodity
     for k in 1:data.K
@@ -254,7 +310,7 @@ function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Dat
             push!(v, j)
         end
         vertices = collect(v)
-        println("vertices : ", vertices)
+        # println("vertices : ", vertices)
 
 
         isVisited = Dict(i=>false for i in vertices)

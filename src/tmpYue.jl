@@ -28,8 +28,12 @@ end
 
 function test()
     # global data = Data("test1", 1, true)
+    # cplexSolveMIP(data)
 
-    global data = Data("pdh", 1)
+    for num in 1:10
+        global data = Data("pdh", num)
 
-    cplexSolveMIP(data)
+        cplexSolveMIP(data)
+    end
+
 end

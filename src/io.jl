@@ -190,3 +190,21 @@ mutable struct Data
     end
 
 end
+
+""" Noeud(id, score)
+    permet de trouver un plus court chemin    
+"""
+mutable struct Noeud
+	id::Int
+	score::Float64 #duree from start to this node
+	#h::Int #estimated distance from this node to the node t
+	Noeud(id::Int) = new(id, typemax(Float64))
+end
+
+""" Solution(paths, functions)
+    stocke une solution de notre problème
+"""
+mutable struct Solution
+    paths::Vector{Vector{Int}}
+    functions::Vector{Vector{Int}}
+end

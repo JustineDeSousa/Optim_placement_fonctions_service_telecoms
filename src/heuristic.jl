@@ -216,3 +216,49 @@ end
 function isFeasible(data::Data, solution::Solution)
 	return areFunctionsOrdered(data,solution) && AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
 end
+
+function neighborhood(data::Data, paths::Vector{Vector{Int}},functions::Vector{Vector{Int}})
+##Function to generate a neighborhood##
+##returns a list of new paths neighbor[k] = list of paths for the client k##
+	neighbors=[]
+	for k in 1:data.K
+		path=deepcopy(paths[k])
+		changes=ceil(Int,0.3*length(path))
+		nodesToChange=rand(path,changes)
+		println("nodes2change",nodesToChange)
+		road=Array{Array{Int,1},1}(undef,0)
+		for nodeToChange in nodesToChange
+			#nodeToChange=rand(path)
+			pos=findfirst(x->x==nodeToChange,path)
+			ng=neighbours2(nodeToChange, data)
+			println("vecinos nodo",ng)
+			println("path ",path)
+			for node in ng
+				#road=deepcopy(paths)
+				changePath=deepcopy(paths[k])
+				if pos==1
+					if path[pos+1] in neighbours2(node,data)
+						changePath[pos]=node
+						push!(road,changePath)	
+					end
+				elseif pos == length(path)
+					if path[pos-1] in neighbours2(node,data)
+						changePath[pos]=node
+						push!(road,changePath)
+					end
+				elseif path[pos-1] in neighbours2(node,data) && path[pos+1] in neighbours2(node,data)
+					changePath[pos]=node
+					push!(road,changePath)
+				end
+				#road[k]=path
+				#push!(neighbors, road)
+			end
+			
+		end
+		push!(neighbors, road)
+	end
+#	for k in 1:data.K
+#		println("road ",neighbors[k])
+#		end
+	return neighbors
+end

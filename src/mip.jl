@@ -70,31 +70,12 @@ function cplexSolveMIP(data::Data)
                 sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
         end
 
+
         # -----------------------------------------
         # flux conservation at each layer
         # -----------------------------------------
 
-        for i in 1:data.N
-            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
-        end
-
-        # for i in 1:data.N
-        #     if i == t
-        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
-        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == -1 + x[i, i, k, data.Layer[k]])
-        #     else
-        #         @constraint(M, sum(x[i, j, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[i, j]) - 
-        #         sum(x[j, i, k, data.Layer[k]] for j in 1:data.N if data.Adjacent[j, i]) == x[i, i, k, data.Layer[k]])
-        #     end
-        # end
-
-
-        for i in 1:data.N
-            @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
-                sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
-        end
-
+        # first layer
         for i in 1:data.N
             if i == s
                 @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
@@ -107,6 +88,17 @@ function cplexSolveMIP(data::Data)
         end
 
 
+        # intermediate from 2 to n layers
+        for i in 1:data.N
+            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
+                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+        end
+        # TODO : it seems that these two constr are identical !
+        # for i in 1:data.N
+        #     @constraint(M, [c in 2:data.Layer[k]], sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) - 
+        #         sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, c-1] == x[i, i, k, c])
+        # end
+
     end
 
 
@@ -115,8 +107,6 @@ function cplexSolveMIP(data::Data)
     for a in 1:data.M) for c in 1:data.Layer[k] ) <= data.Commodity[k, 4])
     
 
-
-    #TODO : for each layer, jump at most one vertex
     function lay(k::Int64,f::Int64, data::Data)
         for i in 1:data.Layer[k]
             # println(data.Order[k][i])
@@ -135,12 +125,11 @@ function cplexSolveMIP(data::Data)
     @constraint(M, [i in 1:data.N, f in 1:data.F], sum( sum(x[i, i, k, c] for c in 1:data.Layer[k] if c==lay(k,f,data))
         * round(Int, data.Commodity[k, 3]) for k in 1:data.K) <= data.CapacityFun[f] * y[f, i])
     
-    # constraint machine capacity
-    # @constraint(M, [i in 1:data.N], sum(y[f, i] for f in 1:data.F) <= data.CapacityNode[i])
-
-
+    
     # constraint of variable u
     @constraint(M, [i in 1:data.N], u[i] <= sum(y[f, i] for f in 1:data.F))
+
+    # constraint machine capacity
     @constraint(M, [i in 1:data.N], u[i] * data.CapacityNode[i] >= sum(y[f, i] for f in 1:data.F)) # 
 
 
@@ -173,7 +162,6 @@ function cplexSolveMIP(data::Data)
 
     # solve the problem
     optimize!(M)
-    # TODO : I'm not sure if this summary works for you
     println(solution_summary(M))
 
     #exploredNodes = MOI.get(backend(M), MOI.NodeCount())

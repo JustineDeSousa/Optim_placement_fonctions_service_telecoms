@@ -101,6 +101,17 @@ function cplexSolveMIP(data::Data)
 
     end
 
+    #TODO : 1) each layer exactly one vertex jump; 2) each arc is passed at most once by all commodities
+    # @constraint(M, 
+    #     [k in 1:data.K, c in 1:data.Layer[k]],
+    #     sum(x[i, i, k, c] for i in 1:data.N) == 1
+    # )
+
+    # @constraint(M,
+    #     [k in 1:data.K, l in size(data.LatencyMat, 1)],
+    #     sum(x[round(Int, data.LatencyMat[l, 1]), round(Int, data.LatencyMat[l, 2]), k, c] for c in 1:data.Layer[k]) <= 1
+    # )
+
 
     # constraint maximal latency 
     @constraint(M, [k in 1:data.K], sum( sum(data.LatencyMat[a, 3] * x[round(Int, data.LatencyMat[a, 1]), round(Int, data.LatencyMat[a, 2]), k, c]
@@ -201,12 +212,14 @@ function cplexSolveMIP(data::Data)
                 fun_placement[i, j] = round(Int, JuMP.value(y[i, j]))
             end
         end
-        println("fun_placement[:, 4] : ", value.(y[:, 4]))
         # println("y = ", value.(y))
         
         # check feasibility
         isFeasible = verificationMIP(data, commodities_path, fun_placement, commodities_jump)
         println("isFeasible ? ", isFeasible)
+        if isOptimal != isFeasible
+            error("MIP sol isOptimal ? ", isOptimal, " but isFeasible ? ", isFeasible)
+        end
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -231,9 +244,9 @@ Return true if the solution MIP solved by CPLEX is feasible.
 function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fun_placement::Array{Int64,2}, commodities_jump::Array{Array{Any,1},1})
 
     # for each commodity, if there is a valid path from s to t
-    println("commodities_path : ", commodities_path)
-    println("fun_placement : ", fun_placement)
-    println("commodities_jump : ", commodities_jump)
+    # println("commodities_path : ", commodities_path)
+    # println("fun_placement : ", fun_placement)
+    # println("commodities_jump : ", commodities_jump)
 
     if isConnectedComponent(commodities_path, data) == false
         error("Commodity path not valid !")
@@ -246,7 +259,8 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
         for (u, v) in commodities_path[k]
             acc_lat += data.Latency[u, v]
         end
-        if acc_lat > data.Commodity[k, 4]
+        if acc_lat - data.Commodity[k, 4] > TOL
+            # println("k : ", k, "  acc_lat = ", acc_lat, "; data.Commodity[k, 4] = ", data.Commodity[k, 4])
             error("maximal latency violated !")
             return false
         end
@@ -262,8 +276,7 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
 
     # function capacity satisfied ?
     residual_capa = [sum(fun_placement[:, i] .* data.CapacityFun) for i in 1:data.N]
-    println("residual_capa : ", residual_capa)
-    println("fun_placement on 4 : ", fun_placement[:, 4])
+    # println("residual_capa : ", residual_capa)
     for k in 1:data.K
         if size(commodities_jump[k], 1) < size(data.Order[k], 1)
             error("functions ordering violated ! ")
@@ -272,8 +285,8 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
         for v in commodities_jump[k]
             residual_capa[v] -= data.Commodity[k, 3]
             if residual_capa[v] < 0
-                println("commodities_jump[$k", "] : ", commodities_jump[k])
-                println("v : ", v, "residual_capa[v] = ", residual_capa[v])
+                # println("commodities_jump[$k", "] : ", commodities_jump[k])
+                # println("v : ", v, "residual_capa[v] = ", residual_capa[v])
                 error("functions capacity not sufficient for demand !")
                 return false
             end

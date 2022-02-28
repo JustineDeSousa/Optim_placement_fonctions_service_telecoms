@@ -28,10 +28,8 @@ end
 
 """
 - utra fast : pdh, di-yuan
-- fast : 
-- normal : atlanta
-- slow : 
-- utra slow : abilene
+- normal : atlanta, dfn-bwin
+- utra slow : dfn-gwin, nobel-germany, newyork, abilene ( Killed! )
 """
 function test()
     # small test
@@ -39,10 +37,10 @@ function test()
     # cplexSolveMIP(data)
 
 
-    names = ["pdh", "di-yuan", "atlanta", "polska", "abilene"]
+    sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany" "newyork", "abilene"]
 
     for num in 1:10
-        global data = Data("atlanta", num) 
+        global data = Data("nobel-us", num) 
 
         cplexSolveMIP(data)
     end

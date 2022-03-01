@@ -22,12 +22,12 @@ end
 
 Returns : 
     - new_col : Bool
-    - path : [x[i, j] ∀ ij ∈ A]
+    - χ : [i, j, c] = {0, 1} ∀ ij ∈ A, ∀ c ∈ data.Layer[k]
 """
 #TODO : dual vars
 function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, opt = true)
     new_col = false
-    path = zeros(Int, (data.M)) # not sure
+    χ = zeros(Int, data.N, data.N, data.Layer[k])
 
     SM = Model(CPLEX.Optimizer) 
 
@@ -40,7 +40,7 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
     end
 
     if opt
-        #TODO : objective reduced cost
+        #TODO : objective minimize reduced cost
         println("--------------------optimization--------------------")
         @objective(SM, 
             Min, 
@@ -171,7 +171,7 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
 
     end
 
-    return (new_col, path)
+    return (new_col, χ)
 end
 
 

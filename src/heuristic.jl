@@ -1,6 +1,8 @@
 include("io.jl")
 
 using DataStructures #Pour la PriorityQueue
+using Random
+Random.seed!(1) #initialized the fix random
 
 """ Renvoie l'ensemble des voisins de nd dans le graphe data.Adjacent"""
 function neighbours(data::Data, nd::Noeud)
@@ -13,6 +15,24 @@ function neighbours(data::Data, nd::Noeud)
    return voisins
 end
 
+function neighbours(data::Data, nd1::Int64,nd2::Int64)
+	voisins = []
+	for i in 1:data.N
+	   if data.Adjacent[nd1,i] && data.Adjacent[i,nd2]
+		   push!(voisins, i)
+	   end
+   end
+   return voisins
+end
+function neighbours(data::Data, nd::Int64)
+	voisins = []
+	for i in 1:data.N
+	   if data.Adjacent[nd,i]
+		   push!(voisins, i)
+	   end
+   end
+   return voisins
+end
 """ Renvoie un chemin de s_k à t_k """
 function find_path(data::Data, k::Int, max_time::Float64=100.0)
 	#Initialisation
@@ -191,18 +211,18 @@ function areFunctionsOrdered(data::Data, solution::Solution)
 		#layers[k] = [f1,f1,f2,f3,...]
 		keepTrack = Int[]
 		for fct in data.Order[k]
-			println("functionsOrder[",k,"] = ", functionsOrder[k])
+			#println("functionsOrder[",k,"] = ", functionsOrder[k])
 			f = popfirst!(functionsOrder[k])
 			while true 
 				f = popfirst!(functionsOrder[k])
 				if fct == f || isempty(functionsOrder[k])
-					println("fct = ", fct, " - f = ", f, " - functionsOrder[",k,"] = ", functionsOrder[k])
+					#println("fct = ", fct, " - f = ", f, " - functionsOrder[",k,"] = ", functionsOrder[k])
 					break
 				end
 			end
 			if fct == f
 				push!(keepTrack, f)
-				println("keepTrack : ", keepTrack)
+				#println("keepTrack : ", keepTrack)
 				continue
 			else #isempty(layers[k])
 				return false
@@ -216,49 +236,130 @@ end
 function isFeasible(data::Data, solution::Solution)
 	return areFunctionsOrdered(data,solution) && AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
 end
+"""compute the extra latency of solution"""
+function maxLatency(data::Data,solution::Solution)
+	maxLatency=0
+	for k in 1:data.K
+		lat=0
+		lat+=sum(data.Latency[solution.paths[k][i],solution.paths[k][i+1]] for i in 1:(length(solution.paths[k])-1))
+		if lat>data.Commodity[k,4]+TOL
+			maxLatency+=lat-data.Commodity[k,4]
+		end
+	end
+	return maxLatency
+end
+"""compute the number of constraint violated"""
+function nbConstraintsViolated(data::Data, solution::Solution)
+	numberConstraints=0
+	for node in 1:data.N
+		for f in solution.functions[node]
+			if isExcluded(data, solution.functions[node], f)
+				numberConstraints+=1
+			end
+		end
+	end
+	return numberConstraints
+end
 
-function neighborhood(data::Data, paths::Vector{Vector{Int}},functions::Vector{Vector{Int}})
-##Function to generate a neighborhood##
-##returns a list of new paths neighbor[k] = list of paths for the client k##
+
+function neighborhood(data::Data, solution::Solution)
+"""Function to generate a neighborhood"""
+"""returns a list of new paths neighbor[k] = list of paths for the client k"""
 	neighbors=[]
 	for k in 1:data.K
-		path=deepcopy(paths[k])
+		path=deepcopy(solution.paths[k])
 		changes=ceil(Int,0.3*length(path))
 		nodesToChange=rand(path,changes)
-		println("nodes2change",nodesToChange)
+		#println("nodes2change",nodesToChange)
 		road=Array{Array{Int,1},1}(undef,0)
 		for nodeToChange in nodesToChange
 			#nodeToChange=rand(path)
 			pos=findfirst(x->x==nodeToChange,path)
-			ng=neighbours2(nodeToChange, data)
-			println("vecinos nodo",ng)
-			println("path ",path)
-			for node in ng
+			#println("vecinos nodo",ng)
+			#println("path ",path)
 				#road=deepcopy(paths)
-				changePath=deepcopy(paths[k])
+				changePath=deepcopy(solution.paths[k])
 				if pos==1
-					if path[pos+1] in neighbours2(node,data)
+					for node in neighbours(data,path[pos+1])
 						changePath[pos]=node
 						push!(road,changePath)	
 					end
 				elseif pos == length(path)
-					if path[pos-1] in neighbours2(node,data)
+					for node in neighbours(data,path[pos-1])
 						changePath[pos]=node
 						push!(road,changePath)
 					end
-				elseif path[pos-1] in neighbours2(node,data) && path[pos+1] in neighbours2(node,data)
-					changePath[pos]=node
-					push!(road,changePath)
+				else
+					for node in neighbours(data,path[pos-1], path[pos+1])
+						changePath[pos]=node
+						push!(road,changePath)
+					end
 				end
-				#road[k]=path
-				#push!(neighbors, road)
-			end
-			
 		end
 		push!(neighbors, road)
 	end
-#	for k in 1:data.K
-#		println("road ",neighbors[k])
-#		end
-	return neighbors
+	selectedNeighbors=Vector{Vector{Int64}}(undef,0)
+	for k in 1:data.K
+		latency=100000000
+		if length(neighbors[k])==0
+			selectRoad=solution.paths[k]
+		else
+			# for road in neighbors[k]
+			# 	lat2=sum(data.Latency[solution.paths[k][i],solution.paths[k][i+1]] for i in 1:(length(solution.paths[k])-1))
+			# 	#println("lat2: ",lat2)
+			# 	if lat2<latency
+			# 		lat2=length(road)
+			# 		selectRoad=road
+			# 	end
+			# end
+			selectRoad=rand(neighbors[k])
+			println("aaaaaaaaaaaaaaaaaaaaaaa")
+		end
+		push!(selectedNeighbors,selectRoad)
+	end	
+	return selectedNeighbors
+end
+"""Function to calculate the cost of the heuristic solution"""
+function costHeuristic(data::Data, solution::Solution,alpha::Int64=100,beta::Int64=100)
+	costOpenNode=0
+	costFunctions=0
+	for i in 1:data.N
+		if length(solution.functions[i])!=0
+			costOpenNode+=data.CostNode[i]
+			for f in solution.functions[i]
+				costFunctions+=data.CostFun[f,i]
+			end
+		end
+	end	
+	costConstV=nbConstraintsViolated(data,solution)
+	costExtraLatency=maxLatency(data,solution)
+	finalCost=costOpenNode+costFunctions+alpha*costConstV+beta*costExtraLatency
+
+end
+
+function recuitSimule(data::Data,tInit::Int64=100,nbIt::Int64=50,phi::Float64=0.9,tFloor::Float64=0.1)
+	bestSol=init_solution(data,10.0)
+	actualSol=deepcopy(bestSol)
+	T=tInit
+	while  T>=tFloor
+		for k in 1:nbIt
+			newSol=place_functions(data, neighborhood(data,actualSol), 10.0)
+			deltaE=costHeuristic(data,newSol)-costHeuristic(data,actualSol)
+			if deltaE<=0
+				actualSol=deepcopy(newSol)
+				#println("delta: ",deltaE)
+				if costHeuristic(data,actualSol)<=costHeuristic(data,bestSol)
+					bestSol=deepcopy(actualSol)
+				end
+			else
+				q=rand()
+				if q<= exp(-deltaE/T)
+					actualSol=deepcopy(newSol)
+				end
+			end
+		end
+		T=phi*T
+		#println("temperature: ", T)
+	end
+	return bestSol
 end

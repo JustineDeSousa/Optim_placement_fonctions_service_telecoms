@@ -1,4 +1,4 @@
-include("mip.jl")
+#include("mip.jl")
 include("heuristic.jl")
 
 
@@ -10,10 +10,15 @@ function test()
 
     println("feasible but not ordered : ", isPartiallyFeasible(data, solution) )
     println("feasible : ", isFeasible(data, solution))
-    global layers = functionsOrder(data,solution)
+    println("nb contrante violee : ",nbConstraintsViolated(data, solution))
+    println("maxLatency : ", maxLatency(data,solution))
+    println("Cost Solution : ", costHeuristic(data,solution))
+    #println("neighborhood :", neighborhood(data,solution))
+    println("recuit Simule :", recuitSimule(data))
+    #global layers = functionsOrder(data,solution)
     
     #global data = Data("pdh", 1)
     # cplexSolveMIP(data)
 end
 
-# test()
+test()

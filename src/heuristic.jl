@@ -87,13 +87,13 @@ end
 
 
 """ Renvoie true si f1 et f2 sont dans les contraintes d'exclusion """
-function AreExcluded(data::Data, f1::Int, f2::Int)
+function areExcluded(data::Data, f1::Int, f2::Int)
 	return f1 != f2 && any( [f1 in data.Affinity[k] && f2 in data.Affinity[k] for k in 1:data.K ])
 end
 
 """ Renvoie true si f est en conflit avec l'une des fonctions déjà placée """
 function isExcluded(data::Data, functions_node::Vector{Int}, f::Int)
-	return any([ isConflict(data, f, fct) for fct in functions_node ])
+	return any([ areExcluded(data, f, fct) for fct in functions_node ])
 end
 
 """
@@ -120,19 +120,14 @@ function place_functions(data::Data, paths::Vector{Vector{Int}}, max_time::Float
 		node = findmax(nb_path)[2] #Sommet où on passe le plus
 		
 		while nb_functions[f] > 0 && time() - startingTime < max_time #While we still need the function
-			# println("node ", node)
 			if data.CapacityNode[node] - length(functions[node]) > 0 #if not node_full
 				if !isExcluded(data,functions[node],f) #if no conflict
 					push!(functions[node], f) #We place f at node
-					# println("functions[", node, "] = ", functions[node])
 					nb_functions[f] -= 1 #We need f one less time
-					# println("nb_functions : ", nb_functions)
 				else #conflict : next node
-					# println("conflict")
 					node = findmax(union(nb_path[1:node-1],nb_path[node+1:end]))[2]
 				end
 			else #node_full
-				# println("node full")
 				nb_path[node] = 0 #We don't want to place function here anymore
 				node = findmax(nb_path)[2]
 			end
@@ -176,35 +171,27 @@ function isPartiallyFeasible(data::Data, solution::Solution)
 	return AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
 end
 
-""" Return true if the solution respect the cst of orders """                                           
-
-
+""" Return true if the solution respect the cst of orders """
 function areFunctionsOrdered(data::Data, solution::Solution)
 	functionsOrder = [ Int[] for _ in 1:data.K]
 	
 	for k in 1:data.K
 		for node in solution.paths[k]
-			# println("solution.functions[",node,"] : ", solution.functions[node])
 			append!(functionsOrder[k], solution.functions[node] )
 		end
 
-		#layers[k] = [f1,f1,f2,f3,...]
-		keepTrack = Int[]
+		#functionsOrder[k] = [f1,f1,f2,f3,...]
 		for fct in data.Order[k]
-			println("functionsOrder[",k,"] = ", functionsOrder[k])
 			f = popfirst!(functionsOrder[k])
 			while true 
 				f = popfirst!(functionsOrder[k])
 				if fct == f || isempty(functionsOrder[k])
-					println("fct = ", fct, " - f = ", f, " - functionsOrder[",k,"] = ", functionsOrder[k])
 					break
 				end
 			end
 			if fct == f
-				push!(keepTrack, f)
-				println("keepTrack : ", keepTrack)
 				continue
-			else #isempty(layers[k])
+			else #isempty(functionsOrder[k])
 				return false
 			end
 		end
@@ -212,7 +199,98 @@ function areFunctionsOrdered(data::Data, solution::Solution)
 	return true
 end
 
+
+"""
+Check if all datas are transported for all clients
+Return the number of functions that doesn't respect the order in total for all clients
+Example : order = (1,2,3). We have functions 1,2 on node 2 with enough capacity. 
+			We have function 3 on node 1. As it is placed before the functions 1,2
+			It is as we don't have the function 3. So that's a lack of 1 function
+"""
+function dataTransportedInOrder(data::Data, solution::Solution)
+	# capaRemaining[node][f] = total capacity of the functions f at node
+	capaRemaining = [ [ count(x->x==f, solution.functions[node])*data.CapacityFun[f] 
+						for f in 1:data.F] 
+					 for node in 1:data.N]
+	funcNotPlaced = 0 #Nombre de fonctions non placées
+	clients = sort(1:data.K, by=k->data.Commodity[k,3], rev=true)
+	for k in clients
+		functionsToCheck = copy(data.Order[k])
+		nodesToCheck = copy(solution.paths[k])
+
+		f = popfirst!(functionsToCheck)
+		node = popfirst!(nodesToCheck)
+
+		while true
+			#Si f est placée sur node et la qté restante de capacité est suffisante
+			if f in solution.functions[node] && capaRemaining[node][f] >= data.Commodity[k,3]
+				# On l'utilise pour le client k
+				capaRemaining[node][f] -= data.Commodity[k,3]
+				if !isempty(functionsToCheck) 
+					f = popfirst!(functionsToCheck)
+				else #On a check toutes les fonctions
+					break
+				end
+			else #f n'est pas sur ce noeud : on passe au suivant
+				if !isempty(nodesToCheck)
+					node = popfirst!(nodesToCheck)
+				else
+					funcNotPlaced += sum([ ceil(Int, data.Commodity[k,3]/data.CapacityFun[f]) for f in functionsToCheck ])
+					break
+				end
+			end
+		end
+	end
+	return funcNotPlaced
+end
+
 """ Renvoie true si la solution est réalisable """
 function isFeasible(data::Data, solution::Solution)
 	return areFunctionsOrdered(data,solution) && AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
+end
+
+function neighborhood(data::Data, paths::Vector{Vector{Int}},functions::Vector{Vector{Int}})
+##Function to generate a neighborhood##
+##returns a list of new paths neighbor[k] = list of paths for the client k##
+	neighbors=[]
+	for k in 1:data.K
+		path=deepcopy(paths[k])
+		changes=ceil(Int,0.3*length(path))
+		nodesToChange=rand(path,changes)
+		println("nodes2change",nodesToChange)
+		road=Array{Array{Int,1},1}(undef,0)
+		for nodeToChange in nodesToChange
+			#nodeToChange=rand(path)
+			pos=findfirst(x->x==nodeToChange,path)
+			ng=neighbours2(nodeToChange, data)
+			println("vecinos nodo",ng)
+			println("path ",path)
+			for node in ng
+				#road=deepcopy(paths)
+				changePath=deepcopy(paths[k])
+				if pos==1
+					if path[pos+1] in neighbours2(node,data)
+						changePath[pos]=node
+						push!(road,changePath)	
+					end
+				elseif pos == length(path)
+					if path[pos-1] in neighbours2(node,data)
+						changePath[pos]=node
+						push!(road,changePath)
+					end
+				elseif path[pos-1] in neighbours2(node,data) && path[pos+1] in neighbours2(node,data)
+					changePath[pos]=node
+					push!(road,changePath)
+				end
+				#road[k]=path
+				#push!(neighbors, road)
+			end
+			
+		end
+		push!(neighbors, road)
+	end
+#	for k in 1:data.K
+#		println("road ",neighbors[k])
+#		end
+	return neighbors
 end

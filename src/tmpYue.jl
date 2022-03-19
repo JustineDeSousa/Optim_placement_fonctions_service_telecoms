@@ -42,9 +42,11 @@ function test()
     sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany", "newyork", "abilene"]
 
     for num in 1:10
-        global data = Data("nobel-us", num) 
+        global data = Data("di-yuan", num) 
 
-        cplexSolveMIP(data)
+        # cplexSolveMIP(data)
+        @info "instance$num"
+        column_genaration1(data)
     end
 
 end
@@ -59,14 +61,25 @@ function test_col_gen()
     # --------------------
     # test sub problems
     # --------------------
-    println("\n test feasible sol \n")
+    # println("\n test feasible sol \n")
+    # global P = [[] for _ in 1:data.K]
 
-    for k in 1:data.K
-        println("\n commodity k : ", k)
-        α = 0.0
-        β = zeros(data.N, size(data.Order[k], 1))
-        sub_problem(data, k, α, β, false)
+    # for k in 1:data.K
+    #     println("\n commodity k : ", k)
 
-    end
+    # α = zeros((data.K))
+    # β = zeros(data.N, data.F)
+    #     (new_col, χ) = sub_problem(data, k, α, β, false)
+    #     @show new_col, χ
+
+    #     append!(P[k], [χ])
+    # end
+
+    # solP = cplexSolveMIP(data, false)
+    # @show solP
+
+    column_genaration1(data)
 
 end
+
+

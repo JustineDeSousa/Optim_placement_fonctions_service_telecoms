@@ -7,8 +7,97 @@ include("mip.jl")
 
 TOL = 0.00001
 
+"""
+Restricted master relaxed problem
+"""
+function master_problem(data::Data)
+    global P
+    # println(P)
 
-function master_problem()
+    # the number of feasible paths for each commodity k
+    sizeP = [size(P[k], 1) for k in 1:data.K]
+    # @show sizeP
+
+    MP = Model(CPLEX.Optimizer) 
+
+    # relaxed vars
+    @variable(MP, y[1:data.F, 1:data.N] >= 0)
+    @variable(MP, u[1:data.N] >= 0)
+    @constraint(MP, [i in 1:data.N], u[i] <= 1)
+    @variable(MP, ρ[k=1:data.K, sizeP[k]] >= 0) # <=1 redundent as to the convexity constr
+
+    # convexity
+    con_α = @constraint(MP, [k in 1:data.K], sum(ρ[k, p] for p in 1:sizeP[k]) == 1)
+
+
+    # objective function
+    @objective(MP, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
+        sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
+    )
+    
+
+    # constraint of variable u
+    @constraint(MP, [i in 1:data.N], u[i] <= sum(y[f, i] for f in 1:data.F))
+
+
+    # constraint machine capacity
+    @constraint(MP, [i in 1:data.N], u[i] * data.CapacityNode[i] >= sum(y[f, i] for f in 1:data.F))
+
+
+    function lay(k::Int64,f::Int64, data::Data)
+        """ return a list of layers where f appears for commodity k"""
+        return [l for l in 1:data.Layer[k] if data.Order[k][l] == f]
+    end
+
+    # constraint function capacitiy # x[i, i, k, c]
+    con_β = @constraint(MP, [i in 1:data.N, f in 1:data.F], 
+        sum(sum(ρ[k,p] * P[k][p][i, i, c] for p in sizeP[k]) * round(Int, data.Commodity[k, 3])
+            for k in 1:data.K, c in lay(k, f, data)) <= data.CapacityFun[f] * y[f, i]
+    )
+    
+    # solve the problem
+    set_silent(MP) # turn off cplex output
+    optimize!(MP)
+    
+    # status of model
+    status = termination_status(MP)
+    isOptimal = status==MOI.OPTIMAL
+
+    # display solution
+    println("isOptimal ? ", isOptimal)
+    @info status
+
+    compute_conflict!(MP)
+
+    if has_values(MP) && isOptimal
+        LB = objective_value(MP)
+        println("LB objective ", LB)
+    elseif MOI.get(MP, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
+        conflict_constraint_list = ConstraintRef[]
+        for (F, S) in list_of_constraint_types(MP)
+            for con in all_constraints(MP, F, S)
+                if MOI.get(MP, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
+                    push!(conflict_constraint_list, con)
+                    println(con)
+                end
+            end
+        end
+
+        error("No conflict could be found for an infeasible model.")
+    else
+        error("Master problem doesn't have optimal solution !")
+    end
+
+    α = zeros((data.K))
+    β = zeros(data.N, data.F)
+    if has_duals(MP)
+        @show dual.(con_α)
+        @show dual.(con_β)
+        return (dual.(con_α), dual.(con_β))
+    else
+        @info has_duals(MP)
+        return (α, β)
+    end
     
 end
 
@@ -23,10 +112,14 @@ end
 Returns : 
     - new_col : Bool
     - χ : [i, j, c] = {0, 1} ∀ ij ∈ A, ∀ c ∈ data.Layer[k]
+
+Args : 
+    - opt : if false, then we generate feasible route avoiding to put many functions on the same node(#TODO : remove it if you don't want it)
 """
 #TODO : dual vars
 function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, opt = true)
     new_col = false
+    # c_max = maximum(data.Layer) # "couches" maximum
     χ = zeros(Int, data.N, data.N, data.Layer[k])
 
     SM = Model(CPLEX.Optimizer) 
@@ -42,14 +135,21 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
     if opt
         #TODO : objective minimize reduced cost
         println("--------------------optimization--------------------")
-        @objective(SM, 
-            Min, 
-            -(α + sum(β[i, f] * x[i, i, c] for i in 1:data.N, f in 1:data.Order[k], c in lay(k, f, data) ))
+        @objective(SM, Min, 
+            -α + sum(β[i, f] * x[i, i, c] * round(Int, data.Commodity[k, 3]) 
+                    for i in 1:data.N, f in data.Order[k], c in lay(k, f, data))
         )
     else
         # constant objective for feasible sol only
         println("--------------------feasible--------------------")
-        @objective(SM, Min, -1)
+        @variable(SM, extra >= 0, Int)
+
+        @objective(SM, Max, -extra-1)
+
+        #TODO : remove this below if you just want a constant
+        @variable(SM, cc[i=1:data.N]>=0, Int)
+        @constraint(SM, [i in 1:data.N], sum(x[i, i, c] for c in 1:data.Layer[k]) <= cc[i])
+        @constraint(SM, [i in 1:data.N], extra >= cc[i])
     end
 
 
@@ -142,6 +242,7 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
 
 
     # solve the problem
+    set_silent(SM) # turn off cplex output
     optimize!(SM)
     # println(solution_summary(SM))
     
@@ -164,8 +265,9 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
             println(sol)
         end
 
+        @info k, reduced_cost
+        
         if reduced_cost < TOL
-            # TODO : generate path and return
             new_col = true
             for i in 1:data.N
                 for j in 1:data.N
@@ -177,10 +279,11 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
                 end
             end
         end
-
+    else
+        error("col_gen1.jl : sub-problem has no optimal solution !")
     end
 
-    println("χ : ", χ)
+    # println("χ : ", χ)
     return (new_col, χ)
 end
 
@@ -189,20 +292,43 @@ end
 #TODO : verification feasibility of sub_problem
 
 
-
+"""
+Algorithm column generation
+"""
 function column_genaration1(data::Data)
-    # -------------
-    # sols initial
-    # -------------
+    # ---------------------
+    # step 1 : sol initial
+    # ---------------------
+    solP = cplexSolveMIP(data, false)
 
-    # P[k] : [χ...] set of paths of commodity k
-    P = [[] for _ in 1:data.K]
+    global P = [solP[k] for k in 1:data.K]
+    # P[k] : [χ1, χ2...] set of paths of commodity k
+
+    # for k in 1:data.K
+    #     println("\n commodity k : ", k)
+    # α = zeros((data.K))
+    # β = zeros(data.N, data.F)
+
+    #     (new_col, χ) = sub_problem(data, k, α, β, false)
+    #     # @show new_col, χ
+
+    #     append!(P[k], [χ])
+    #     # @show P[k]
+    # end
+
+
+    # ---------------------
+    # step 2 : resolve MP
+    # ---------------------
+    stop = [false for _ in 1:data.K]
+    @show sum(stop)
+
+    println("\n resolve MP")
+    (α, β) = master_problem(data)
+
     for k in 1:data.K
-        println("\n commodity k : ", k)
-        α = 0.0
-        β = zeros(data.N, size(data.Order[k], 1))
-        
-        (new_col, χ) = sub_problem(data, k, α, β, false)
+        (new_col, χ) = sub_problem(data, k, α[k], β)
+        @show (new_col, χ)
     end
 
 end

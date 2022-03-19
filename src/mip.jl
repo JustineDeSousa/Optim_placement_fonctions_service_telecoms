@@ -32,7 +32,9 @@ TOL = 0.00001
 # end
 
 
-function cplexSolveMIP(data::Data)
+function cplexSolveMIP(data::Data, opt = true)
+    solP = [[] for _ in 1:data.K]
+
     # modelization
     M = Model(CPLEX.Optimizer) 
 
@@ -42,9 +44,17 @@ function cplexSolveMIP(data::Data)
     @variable(M, u[1:data.N], Bin)
 
     # objective function
-    @objective(M, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
-        sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N))
+    if opt
+        println("--------------------optimization--------------------")
 
+        @objective(M, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
+            sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
+        )
+    else
+        # constant objective for feasible sol only
+        println("--------------------feasible--------------------")
+        @objective(M, Min, 1)
+    end
     
     # ------------------
     # flux constraints
@@ -163,8 +173,9 @@ function cplexSolveMIP(data::Data)
 
 
     # solve the problem
+    set_silent(M)
     optimize!(M)
-    println(solution_summary(M))
+    # println(solution_summary(M))
 
     #exploredNodes = MOI.get(backend(M), MOI.NodeCount())
     
@@ -235,6 +246,21 @@ function cplexSolveMIP(data::Data)
         error("No conflict could be found for an infeasible model.")
     end
 
+    if opt
+        return solP
+    else
+        for k in 1:data.K
+            χ = zeros(Int, data.N, data.N, data.Layer[k])
+            for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
+                if value(x[i,j,k,c]) > TOL
+                    χ[i, j, c] = 1
+                end
+            end
+            append!(solP[k], [χ])
+        end
+        
+        return solP
+    end
 end
 
 

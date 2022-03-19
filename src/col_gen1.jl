@@ -49,7 +49,7 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
     else
         # constant objective for feasible sol only
         println("--------------------feasible--------------------")
-        @objective(SM, Min, 1)
+        @objective(SM, Min, -1)
     end
 
 
@@ -143,7 +143,7 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
 
     # solve the problem
     optimize!(SM)
-    println(solution_summary(SM))
+    # println(solution_summary(SM))
     
     # status of model
     status = termination_status(SM)
@@ -164,16 +164,45 @@ function sub_problem(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, op
             println(sol)
         end
 
-        if reduced_cost <= TOL
+        if reduced_cost < TOL
             # TODO : generate path and return
             new_col = true
+            for i in 1:data.N
+                for j in 1:data.N
+                    for c in 1:data.Layer[k]
+                        if value(x[i, j, c]) > TOL
+                            χ[i, j, c] = 1
+                        end
+                    end
+                end
+            end
         end
 
     end
 
+    println("χ : ", χ)
     return (new_col, χ)
 end
 
 
 
 #TODO : verification feasibility of sub_problem
+
+
+
+function column_genaration1(data::Data)
+    # -------------
+    # sols initial
+    # -------------
+
+    # P[k] : [χ...] set of paths of commodity k
+    P = [[] for _ in 1:data.K]
+    for k in 1:data.K
+        println("\n commodity k : ", k)
+        α = 0.0
+        β = zeros(data.N, size(data.Order[k], 1))
+        
+        (new_col, χ) = sub_problem(data, k, α, β, false)
+    end
+
+end

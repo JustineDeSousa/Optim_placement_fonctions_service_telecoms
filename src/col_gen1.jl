@@ -4,6 +4,8 @@
 
 include("mip.jl")
 
+MAXITE = 200
+
 
 TOL = 0.000001
 
@@ -32,7 +34,7 @@ function master_problem1(data::Data)
 
     # objective function
     @objective(MP, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
-        sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
+                sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
     )
     
 
@@ -76,16 +78,15 @@ function master_problem1(data::Data)
         @info "LB = ", LB
         println("LB objective ", LB)
 
-        @show sum(value.(ρ))
+        # @show sum(value.(ρ))
         @show value.(u)
         @show value.(y)
 
-        # ρ_star = value.(ρ)
-
-        # for i in 1:data.N, f in 1:data.F 
-        #     left = sum(sum(ρ[k,p] * P[k][p][i, i, c] for p in 1:sizeP[k]) * round(Int, data.Commodity[k, 3]) for k in 1:data.K, c in lay(k, f, data)) 
-        #     println("i : ", i, " - f : ", f, " - left: ", left)
-        # end
+        for k in 1:data.K, p in 1:sizeP[k]
+            if value(ρ[k, p]) >TOL
+                @info "k, p, ρ[k, p]", k, p, ρ[k, p]
+            end
+        end
 
     elseif MOI.get(MP, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -106,8 +107,8 @@ function master_problem1(data::Data)
     α = zeros((data.K))
     β = zeros(data.N, data.F)
     if has_duals(MP)
-        # @show dual.(con_α)
-        # @show dual.(con_β)
+        @show dual.(con_α)
+        @show dual.(con_β)
         return (dual.(con_α), dual.(con_β), LB)
     else
         @info has_duals(MP)
@@ -312,12 +313,13 @@ end
 Algorithm column generation
 """
 function column_genaration1(data::Data)
+    convergence = []
     # ---------------------
     # step 1 : sol initial
     # ---------------------
     ite = 0
     @info "ite = ", ite
-    solP = cplexSolveMIP(data, false)
+    solP, obj_v = cplexSolveMIP(data, false, false)
 
     global P = [solP[k] for k in 1:data.K]
     # P[k] : [χ1, χ2...] set of paths of commodity k
@@ -342,6 +344,9 @@ function column_genaration1(data::Data)
     @show sum(stop)
 
     while sum(stop) < data.K
+        if ite >= MAXITE
+            break
+        end
         ite += 1
         println("\n\n ---------------")
         @info "ite = $ite"
@@ -350,6 +355,7 @@ function column_genaration1(data::Data)
 
         println("\n resolve MP")
         (α, β, LB) = master_problem1(data)
+        append!(convergence, LB)
     
         # -------------------------
         # step 3 : resolve SP ∀ k
@@ -372,6 +378,6 @@ function column_genaration1(data::Data)
         end
         println("ending with LB = ", LB)
     end
-
+    @show convergence
 
 end

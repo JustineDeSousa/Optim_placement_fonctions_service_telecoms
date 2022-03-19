@@ -55,16 +55,23 @@ end
 
 function test_col_gen()
     # small test
-    global data = Data("test1", 1, true)
+    # global data = Data("test1", 1, true)
+
+    # column_genaration1(data)
+
+    # println("\nLP bound")
+    # sol, LP_Bound = cplexSolveMIP(data, true, true)
+    # @info "LP_Bound = ", LP_Bound
+
+
+    # big data
+    global data = Data("pdh", 1) 
 
     column_genaration1(data)
 
-    # big data
-    # global data = Data("pdh", 1) 
-
-    # cplexSolveMIP(data)
-
-    # column_genaration1(data)
+    println("\nLP bound ")
+    sol, LP_Bound = cplexSolveMIP(data, true, true)
+    @info "LP_Bound = ", LP_Bound
 
 
 end

@@ -32,7 +32,7 @@ TOL = 0.00001
 # end
 
 
-function cplexSolveMIP(data::Data, opt = true)
+function cplexSolveMIP(data::Data, opt = true, LP = false)
     solP = [[] for _ in 1:data.K]
 
     # modelization
@@ -42,6 +42,10 @@ function cplexSolveMIP(data::Data, opt = true)
     @variable(M, x[i=1:data.N, j=1:data.N, k=1:data.K, c=1:data.Layer[k]], Bin)
     @variable(M, y[1:data.F, 1:data.N] >= 0, Int)
     @variable(M, u[1:data.N], Bin)
+
+    if LP
+        relax_integrality(M)
+    end
 
     # objective function
     if opt
@@ -190,15 +194,19 @@ function cplexSolveMIP(data::Data, opt = true)
     println("solveTime = ", solveTime)
 
     compute_conflict!(M)
+    obj_val = 0.0
 
     if has_values(M)
-        GAP = MOI.get(M, MOI.RelativeGap())
+        # GAP = MOI.get(M, MOI.RelativeGap())
         obj_val = objective_value(M)
         # best_bound = objective_bound(M)
 
         println("obj_val = ", obj_val)
         # println("best_bound = ", best_bound)
         # println("GAP = ", GAP)
+        if LP
+            return (solP, obj_val)
+        end
 
         commodities_path = [[] for _ in 1:data.K] # Array{Array{Tuple{Int64,Int64},1},1}()
         fun_placement = zeros(Int64, data.F, data.N)
@@ -247,7 +255,7 @@ function cplexSolveMIP(data::Data, opt = true)
     end
 
     if opt
-        return solP
+        return (solP, obj_val)
     else
         for k in 1:data.K
             χ = zeros(Int, data.N, data.N, data.Layer[k])
@@ -259,7 +267,7 @@ function cplexSolveMIP(data::Data, opt = true)
             append!(solP[k], [χ])
         end
         
-        return solP
+        return (solP, obj_val)
     end
 end
 

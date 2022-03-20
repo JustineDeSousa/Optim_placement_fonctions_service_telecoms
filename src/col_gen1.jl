@@ -4,7 +4,7 @@
 
 include("mip.jl")
 
-MAXITE = 200
+MAXITE = 100
 
 
 TOL = 0.000001
@@ -133,7 +133,7 @@ Args :
     - opt : if false, then we generate feasible route avoiding to put many functions on the same node(#TODO : remove it if you don't want it)
 """
 #TODO : dual vars
-function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, opt = true)
+function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, opt = true, feasib = 0)
     new_col = false
     # c_max = maximum(data.Layer) # "couches" maximum
     χ = zeros(Int, data.N, data.N, data.Layer[k])
@@ -155,17 +155,32 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
             -α + sum(β[i, f] * x[i, i, c] 
                     for i in 1:data.N, f in data.Order[k], c in lay(k, f, data))
         ) # * round(Int, data.Commodity[k, 3]) 
-    else
-        # constant objective for feasible sol only
+
+    elseif feasib == 0
+        # constant
+        println("--------------------feasible--------------------")
+        @objective(SM, Max, -1)
+
+    elseif feasib == 1
+        # avoid to install too many functions on one node
         println("--------------------feasible--------------------")
         @variable(SM, extra >= 0, Int)
 
         @objective(SM, Max, -extra-1)
 
-        #TODO : remove this below if you just want a constant
         @variable(SM, cc[i=1:data.N]>=0, Int)
         @constraint(SM, [i in 1:data.N], sum(x[i, i, c] for c in 1:data.Layer[k]) <= cc[i])
         @constraint(SM, [i in 1:data.N], extra >= cc[i])
+
+    elseif feasib == 2
+        # the shortest path length
+        println("--------------------feasible--------------------")
+        @objective(SM, Max, -sum(x))
+
+    elseif feasib == 3
+        # the longest path
+        println("--------------------feasible--------------------")
+        @objective(SM, Min, -sum(x))
     end
 
 
@@ -269,7 +284,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     # display solution
     println("isOptimal ? ", isOptimal)
 
-    if has_values(SM) && isOptimal
+    if has_values(SM) #&& isOptimal
         GAP = MOI.get(SM, MOI.RelativeGap())
         println("GAP : ", GAP)
         reduced_cost = objective_value(SM)
@@ -284,7 +299,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
         @info "(k, reduced_cost) = ", k, reduced_cost
         
         # the minimum reduced_cost is negative
-        if reduced_cost < -TOL
+        if reduced_cost <= -TOL
             new_col = true
             for i in 1:data.N
                 for j in 1:data.N
@@ -324,17 +339,20 @@ function column_genaration1(data::Data)
     global P = [solP[k] for k in 1:data.K]
     # P[k] : [χ1, χ2...] set of paths of commodity k
 
-    # for k in 1:data.K
-    #     println("\n commodity k : ", k)
-    # α = zeros((data.K))
-    # β = zeros(data.N, data.F)
+    for feasib in [0, 1, 2, 3]
+        for k in 1:data.K
+            println("\n commodity k : ", k, " feasib : ", feasib)
+            α = zeros((data.K))
+            β = zeros(data.N, data.F)
+    
+            (new_col, χ) = sub_problem1(data, k, α[k], β, false, feasib)
+            # @show new_col, χ
+    
+            append!(P[k], [χ])
+            # @show P[k]
+        end
+    end
 
-    #     (new_col, χ) = sub_problem(data, k, α, β, false)
-    #     # @show new_col, χ
-
-    #     append!(P[k], [χ])
-    #     # @show P[k]
-    # end
 
 
     # ---------------------

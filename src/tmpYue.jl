@@ -60,8 +60,12 @@ function test_col_gen()
     # column_genaration1(data)
 
     # println("\nLP bound")
-    # sol, LP_Bound = cplexSolveMIP(data, true, true)
+    # sol_relaxed, LP_Bound = cplexSolveMIP(data, true, true)
     # @info "LP_Bound = ", LP_Bound
+
+    # println("\nMIP ")
+    # sol_integer, obj_v = cplexSolveMIP(data)
+    # @info "obj_v = ", obj_v
 
 
     # big data
@@ -70,9 +74,12 @@ function test_col_gen()
     column_genaration1(data)
 
     println("\nLP bound ")
-    sol, LP_Bound = cplexSolveMIP(data, true, true)
+    sol_relaxed, LP_Bound = cplexSolveMIP(data, true, true)
     @info "LP_Bound = ", LP_Bound
 
+    println("\nMIP ")
+    sol_integer, obj_v = cplexSolveMIP(data)
+    @info "obj_v = ", obj_v
 
 end
 

@@ -207,3 +207,10 @@ mutable struct Solution
     paths::Vector{Vector{Int}}
     functions::Vector{Vector{Int}}
 end
+
+
+# mutable struct MIPsol
+#     objVal::Float64
+#     solveTime::Float64
+#     isOptimal::Bool
+# end

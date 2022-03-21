@@ -1,10 +1,9 @@
 # This file contains functions solving the multi-commodities problem using CPLEX solver
 # by approach column generation
-#TODO : 1) master_problem; 2) dual vars; 3) initial sols; 4) sub_problem
 
 include("mip.jl")
 
-MAXITE = 100
+MAXITE = 3
 
 
 TOL = 0.000001
@@ -130,9 +129,8 @@ Returns :
     - χ : [i, j, c] = {0, 1} ∀ ij ∈ A, ∀ c ∈ data.Layer[k]
 
 Args : 
-    - opt : if false, then we generate feasible route avoiding to put many functions on the same node(#TODO : remove it if you don't want it)
+    - opt : if false, then we generate feasible route avoiding to put many functions on the same node(
 """
-#TODO : dual vars
 function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, opt = true, feasib = 0)
     new_col = false
     # c_max = maximum(data.Layer) # "couches" maximum
@@ -153,8 +151,8 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
         println("--------------------optimization--------------------")
         @objective(SM, Min, 
             -α + sum(β[i, f] * x[i, i, c] 
-                    for i in 1:data.N, f in data.Order[k], c in lay(k, f, data))
-        ) # * round(Int, data.Commodity[k, 3]) 
+                    for i in 1:data.N, f in data.Order[k], c in lay(k, f, data) * round(Int, data.Commodity[k, 3]))
+        ) #   
 
     elseif feasib == 0
         # constant
@@ -328,13 +326,14 @@ end
 Algorithm column generation
 """
 function column_genaration1(data::Data)
+    start = time()
     convergence = []
     # ---------------------
     # step 1 : sol initial
     # ---------------------
     ite = 0
     @info "ite = ", ite
-    solP, obj_v = cplexSolveMIP(data, false, false)
+    (solP, obj_val) = cplexSolveMIP(data, false, false)
 
     global P = [solP[k] for k in 1:data.K]
     # P[k] : [χ1, χ2...] set of paths of commodity k
@@ -353,7 +352,7 @@ function column_genaration1(data::Data)
         end
     end
 
-
+    DW = 0.0
 
     # ---------------------
     # step 2 : resolve MP
@@ -373,6 +372,7 @@ function column_genaration1(data::Data)
 
         println("\n resolve MP")
         (α, β, LB) = master_problem1(data)
+        DW = LB
         append!(convergence, LB)
     
         # -------------------------
@@ -396,6 +396,9 @@ function column_genaration1(data::Data)
         end
         println("ending with LB = ", LB)
     end
+
+    solved_time = round(time() - start, digits = 2)
     @show convergence
 
+    return(round(DW, digits = 2), ite, solved_time)
 end

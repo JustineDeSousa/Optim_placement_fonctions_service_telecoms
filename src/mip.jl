@@ -5,6 +5,7 @@ include("io.jl")
 TOL = 0.00001
 
 
+
 # function tryconf()
 #     model = Model(CPLEX.Optimizer)  # You must use a solver that supports conflict refining/IIS
 #     # computation, like CPLEX or Gurobi
@@ -195,11 +196,13 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
 
     compute_conflict!(M)
     obj_val = 0.0
+    solveTime = 0.0
 
     if has_values(M)
         # GAP = MOI.get(M, MOI.RelativeGap())
-        obj_val = objective_value(M)
+        obj_val = round(objective_value(M), digits = 2)
         # best_bound = objective_bound(M)
+        solveTime = round(MOI.get(M, MOI.SolveTime()), digits = 2)
 
         println("obj_val = ", obj_val)
         # println("best_bound = ", best_bound)
@@ -266,7 +269,7 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
             end
             append!(solP[k], [χ])
         end
-        
+
         return (solP, obj_val)
     end
 end

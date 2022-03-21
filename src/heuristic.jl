@@ -113,7 +113,7 @@ end
 
 """ Renvoie true si f est en conflit avec l'une des fonctions déjà placée """
 function isExcluded(data::Data, functions_node::Vector{Int}, f::Int)
-	return any([ isConflict(data, f, fct) for fct in functions_node ])
+	return any([ AreExcluded(data, f, fct) for fct in functions_node ])
 end
 
 """
@@ -270,6 +270,7 @@ function neighborhood(data::Data, solution::Solution)
 		path=deepcopy(solution.paths[k])
 		changes=ceil(Int,0.3*length(path))
 		nodesToChange=rand(path,changes)
+		nodesToChange=filter(x -> x != path[1] && x!=path[length(path)], nodesToChange)
 		#println("nodes2change",nodesToChange)
 		road=Array{Array{Int,1},1}(undef,0)
 		for nodeToChange in nodesToChange
@@ -313,7 +314,7 @@ function neighborhood(data::Data, solution::Solution)
 			# 	end
 			# end
 			selectRoad=rand(neighbors[k])
-			println("aaaaaaaaaaaaaaaaaaaaaaa")
+			#println("aaaaaaaaaaaaaaaaaaaaaaa")
 		end
 		push!(selectedNeighbors,selectRoad)
 	end	
@@ -337,7 +338,7 @@ function costHeuristic(data::Data, solution::Solution,alpha::Int64=100,beta::Int
 
 end
 
-function recuitSimule(data::Data,tInit::Int64=100,nbIt::Int64=50,phi::Float64=0.9,tFloor::Float64=0.1)
+function recuitSimule(data::Data,tInit::Int64=500,nbIt::Int64=50,phi::Float64=0.9,tFloor::Float64=0.1)
 	bestSol=init_solution(data,10.0)
 	actualSol=deepcopy(bestSol)
 	T=tInit
@@ -359,7 +360,102 @@ function recuitSimule(data::Data,tInit::Int64=100,nbIt::Int64=50,phi::Float64=0.
 			end
 		end
 		T=phi*T
-		#println("temperature: ", T)
+		
 	end
+	#println("feasible ", isFeasible(data,bestSol))
 	return bestSol
+end
+""" Function to order the placement of functions over a feasible path"""
+function orderFunctions(data::Data,solution::Solution)
+	functions_ordered=[Int[] for i in 1:data.N]
+	nonOrder=[]
+	functions=deepcopy(solution.functions)
+	for k in 1:data.K
+		path=deepcopy(solution.paths[k])
+		ordK=Array{Tuple{Int64,Int64}}(undef,0)
+		order=[]
+		for f in data.Order[k]
+			needs=Int(ceil(data.Commodity[k,3] / data.CapacityFun[f]))
+			for i in 1:needs
+				push!(order,f)
+			end
+		end
+		println("order : ",order)
+		while length(order)!=0
+			assign=false
+			for i in path
+				if order[1] in functions[i] && !isExcluded(data, functions_ordered[i], order[1])  && length(functions_ordered[i])<data.CapacityNode[i]
+					assign=true
+					push!(ordK,(i,order[1]))
+					push!(functions_ordered[i],order[1])
+					deleteat!(functions[i],findfirst(x-> x==order[1],functions[i]))
+					if (findfirst(x-> x==i,path)-1)>0
+						deleteat!(path,1:(findfirst(x-> x==i,path)-1))
+					end
+					deleteat!(order,1)
+					break
+				end
+			end
+			if !assign
+				for i in path
+					if length(functions[i])!=0 && !isExcluded(data, functions_ordered[i], order[1]) && length(functions_ordered[i])<data.CapacityNode[i]
+						push!(ordK,(i,order[1]))
+						push!(functions_ordered[i],order[1])
+						if (findfirst(x-> x==i,path)-1)>0
+							deleteat!(path,1:(findfirst(x-> x==i,path)-1))
+						end
+						assign=true
+						deleteat!(order,1)
+						break
+					end
+				end				
+			end
+			if !assign
+				for i in path
+					if !isExcluded(data,functions_ordered[i],order[1])
+						push!(ordK,(i,order[1]))
+						push!(functions_ordered[i],order[1])
+						if (findfirst(x-> x==i,path)-1)>0
+							deleteat!(path,1:(findfirst(x-> x==i,path)-1))
+						end
+						deleteat!(order,1)
+						assign=true
+						break
+					end
+				end
+			end
+			if !assign
+				for tup in ordK
+					deleteat!(functions_ordered[tup[1]],findfirst(x-> x==tup[2],functions_ordered[tup[1]]))
+				end
+				push!(nonOrder,k)
+				break
+			end
+		end
+	end
+	for k in nonOrder
+		path=deepcopy( solution.paths[k])
+		order=[]
+		for f in data.Order[k]
+			needs=Int(ceil(data.Commodity[k,3] / data.CapacityFun[f]))
+			for i in 1:needs
+				push!(order,f)
+			end
+		end
+		for f in order
+			for i in path
+				if !isExcluded(data, functions_ordered[i], f) && length(functions_ordered[i])<data.CapacityNode[i]
+					push!(functions_ordered[i],f)
+					if (findfirst(x-> x==i,path)-1)>0
+						deleteat!(path,1:(findfirst(x-> x==i,path)-1))
+					end
+					#deleteat!(order,1)
+					break
+				end
+			end
+		end
+	end
+	solFinal=Solution(solution.paths,functions_ordered)
+	println("finSol: ",solFinal)
+	return solFinal
 end

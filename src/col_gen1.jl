@@ -1,6 +1,5 @@
 # This file contains functions solving the multi-commodities problem using CPLEX solver
 # by approach column generation
-#TODO : 1) master_problem; 2) dual vars; 3) initial sols; 4) sub_problem
 
 include("mip.jl")
 

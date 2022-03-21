@@ -36,7 +36,7 @@ function master_problem2(data::Data)
     con_α = @constraint(MP, [k in 1:data.K], sum(ρ[k, p] for p in 1:sizeP[k]) == 1)
 
     # f is installed at least at one node
-    @constraint(MP, [k in 1:data.K, f in ])
+    @constraint(MP, [k in 1:data.K, f in data.F])
 
 
 end

@@ -55,32 +55,34 @@ end
 
 function test_col_gen()
     # small test
-    # global data = Data("test1", 1, true)
+    global data = Data("test1", 1, true)
 
-    # column_genaration1(data)
+    (DW_bound, ite, solved_time) = column_genaration1(data)
+    @info "DW_bound = ", DW_bound
 
-    # println("\nLP bound")
-    # sol_relaxed, LP_Bound = cplexSolveMIP(data, true, true)
-    # @info "LP_Bound = ", LP_Bound
-
-    # println("\nMIP ")
-    # sol_integer, obj_v = cplexSolveMIP(data)
-    # @info "obj_v = ", obj_v
-
-
-    # big data
-    global data = Data("pdh", 1) 
-
-    column_genaration1(data)
-
-    println("\nLP bound ")
-    sol_relaxed, LP_Bound = cplexSolveMIP(data, true, true)
+    println("\nLP bound")
+    (solP, LP_Bound) = cplexSolveMIP(data, true, true)
     @info "LP_Bound = ", LP_Bound
 
     println("\nMIP ")
-    sol_integer, obj_v = cplexSolveMIP(data)
+    (solP, obj_v) = cplexSolveMIP(data)
     @info "obj_v = ", obj_v
 
+
+    # big data
+    # global data = Data("pdh", 1) 
+
+    # (DW_bound, ite, solved_time) = column_genaration1(data)
+
+    # println("\nLP bound ")
+    # (solP, LP_Bound) = cplexSolveMIP(data, true, true)
+    # @info "LP_Bound = ", LP_Bound
+
+    # println("\nMIP ")
+    # (solP, obj_v) = cplexSolveMIP(data)
+    # @info "obj_v = ", obj_v
+
 end
+
 
 

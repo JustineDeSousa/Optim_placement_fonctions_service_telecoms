@@ -3,7 +3,7 @@
 
 include("mip.jl")
 
-MAXITE = 3
+MAXITE = 100
 
 
 TOL = 0.000001
@@ -108,7 +108,7 @@ function master_problem1(data::Data)
     if has_duals(MP)
         @show dual.(con_α)
         @show dual.(con_β)
-        return (dual.(con_α), dual.(con_β), LB)
+        return (dual.(con_α), -dual.(con_β), LB)
     else
         @info has_duals(MP)
         return (α, β, LB)
@@ -150,9 +150,10 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
         #TODO : objective minimize reduced cost
         println("--------------------optimization--------------------")
         @objective(SM, Min, 
-            -α + sum(β[i, f] * x[i, i, c] 
-                    for i in 1:data.N, f in data.Order[k], c in lay(k, f, data) * round(Int, data.Commodity[k, 3]))
-        ) #   
+            sum(β[i, f] * x[i, i, c] * round(Int, data.Commodity[k, 3])
+                    for i in 1:data.N, f in data.Order[k], c in lay(k, f, data) 
+                )
+        )
 
     elseif feasib == 0
         # constant
@@ -285,7 +286,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     if has_values(SM) #&& isOptimal
         GAP = MOI.get(SM, MOI.RelativeGap())
         println("GAP : ", GAP)
-        reduced_cost = objective_value(SM)
+        reduced_cost = objective_value(SM) - α
         println("reduced_cost : ", reduced_cost)
 
         for c in 1:data.Layer[k]
@@ -294,6 +295,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
             println(sol)
         end
 
+        println()
         @info "(k, reduced_cost) = ", k, reduced_cost
         
         # the minimum reduced_cost is negative
@@ -352,7 +354,9 @@ function column_genaration1(data::Data)
         end
     end
 
-    DW = 0.0
+    DW = Inf
+
+    println("\n\n\n")
 
     # ---------------------
     # step 2 : resolve MP
@@ -372,7 +376,11 @@ function column_genaration1(data::Data)
 
         println("\n resolve MP")
         (α, β, LB) = master_problem1(data)
-        DW = LB
+
+        if LB < DW
+            DW = LB
+        end
+        
         append!(convergence, LB)
     
         # -------------------------
@@ -380,6 +388,7 @@ function column_genaration1(data::Data)
         # -------------------------
 
         for k in 1:data.K
+            println()
             @info "(ite, k) = ", ite, k 
 
             if !stop[k]
@@ -391,11 +400,15 @@ function column_genaration1(data::Data)
                     # @show size(P[k], 1)
                 else
                     stop[k] = true
+                    @info "commodity ", k, "terminates ! \n"
                 end
             end
         end
-        println("ending with LB = ", LB)
     end
+
+    println()
+    @info "Ending with DW = ", DW, " and with ite : ", ite
+    println()
 
     solved_time = round(time() - start, digits = 2)
     @show convergence

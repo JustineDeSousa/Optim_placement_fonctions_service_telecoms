@@ -10,7 +10,9 @@ TOL = 0.000001
 
 """
 Restricted master relaxed problem
-"""
+
+The classical model adapted to the MIP
+""" 
 function master_problem1(data::Data)
     global P
     # println(P)
@@ -147,7 +149,6 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     end
 
     if opt
-        #TODO : objective minimize reduced cost
         println("--------------------optimization--------------------")
         @objective(SM, Min, 
             sum(β[i, f] * x[i, i, c] * round(Int, data.Commodity[k, 3])
@@ -320,8 +321,6 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
 end
 
 
-
-#TODO : verification feasibility of sub_problem
 
 
 """

@@ -216,12 +216,12 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
         commodities_jump = [[] for _ in 1:data.K]
 
         for k in 1:data.K
-            println("Client ", k, " : ")
-            for c in 1:data.Layer[k]
-                print("\tCouche ", c, " -> ")
-                solution = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i,j,k,c]) > TOL ]
-                println(solution)
-            end
+            # println("Client ", k, " : ")
+            # for c in 1:data.Layer[k]
+            #     print("\tCouche ", c, " -> ")
+            #     solution = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i,j,k,c]) > TOL ]
+            #     println(solution)
+            # end
 
             commodities_jump[k] = [i for i in 1:data.N, c in 1:data.Layer[k] if value(x[i, i, k, c]) > TOL]
 

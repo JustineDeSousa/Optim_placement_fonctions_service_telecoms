@@ -105,14 +105,16 @@ function master_problem1(data::Data)
         error("Master problem doesn't have optimal solution !")
     end
 
+    # get dual variables
     α = zeros((data.K))
     β = zeros(data.N, data.F)
     if has_duals(MP)
-        @show dual.(con_α)
-        @show dual.(con_β)
+        # @show dual.(con_α)
+        # @show dual.(con_β)
         return (dual.(con_α), -dual.(con_β), LB)
     else
         @info has_duals(MP)
+        error("col_gen1.jl MP has no dual vars ! ")
         return (α, β, LB)
     end
     

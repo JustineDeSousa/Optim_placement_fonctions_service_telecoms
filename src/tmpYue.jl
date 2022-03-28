@@ -53,7 +53,9 @@ function test()
 end
 
 
-
+"""
+test the first column generation model
+"""
 function test_col_gen1()
     # small test
     # global data = Data("test1", 1, true)
@@ -86,7 +88,9 @@ function test_col_gen1()
 
 end
 
-
+"""
+test the second column generation model
+"""
 function test_col_gen2()
 
     # # small test

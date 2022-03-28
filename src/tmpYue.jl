@@ -1,6 +1,7 @@
 
 include("mip.jl")
 include("col_gen1.jl")
+include("col_gen2.jl")
 
 
 function test1()
@@ -53,7 +54,7 @@ end
 
 
 
-function test_col_gen()
+function test_col_gen1()
     # small test
     # global data = Data("test1", 1, true)
 
@@ -73,6 +74,7 @@ function test_col_gen()
     global data = Data("pdh", 2) 
 
     (DW_bound, ite, solved_time) = column_genaration1(data)
+    @info "DW_bound = ", DW_bound
 
     println("\n\nLP bound ")
     (solP, LP_Bound) = cplexSolveMIP(data, true, true)
@@ -82,6 +84,39 @@ function test_col_gen()
     (solP, obj_v) = cplexSolveMIP(data)
     @info "obj_v = ", obj_v
 
+end
+
+
+function test_col_gen2()
+
+    # # small test
+    # global data = Data("test1", 1, true)
+
+    # (DW2_bound, ite, solved_time) = column_genaration2(data)
+    # @info "DW2_bound = ", DW2_bound
+
+    # println("\nLP bound")
+    # (solP, LP_Bound) = cplexSolveMIP(data, true, true)
+    # @info "LP_Bound = ", LP_Bound
+
+    # println("\nMIP ")
+    # (solP, obj_v) = cplexSolveMIP(data)
+    # @info "obj_v = ", obj_v
+
+
+    # big data
+    global data = Data("pdh", 2) 
+
+    (DW2_bound, ite, solved_time) = column_genaration2(data)
+    @info "DW2_bound = ", DW2_bound
+
+    println("\n\nLP bound ")
+    (solP, LP_Bound) = cplexSolveMIP(data, true, true)
+    @info "LP_Bound = ", LP_Bound
+
+    println("\n\nMIP ")
+    (solP, obj_v) = cplexSolveMIP(data)
+    @info "obj_v = ", obj_v
 end
 
 

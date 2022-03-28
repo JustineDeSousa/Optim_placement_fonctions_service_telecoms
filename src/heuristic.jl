@@ -396,7 +396,11 @@ function recuitSimule(data::Data,tInit::Int64=500,nbIt::Int64=50,phi::Float64=0.
 		
 	end
 	#println("feasible ", isFeasible(data,bestSol))
-	return bestSol
+	if isFeasible(data,bestSol)
+		return bestSol
+	else
+		return orderFunctions(data,bestSol)
+	end
 end
 """ Function to order the placement of functions over a feasible path"""
 function orderFunctions(data::Data,solution::Solution)
@@ -413,7 +417,7 @@ function orderFunctions(data::Data,solution::Solution)
 				push!(order,f)
 			end
 		end
-		println("order : ",order)
+		#println("order : ",order)
 		while length(order)!=0
 			assign=false
 			for i in path

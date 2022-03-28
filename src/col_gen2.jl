@@ -202,7 +202,7 @@ function master_problem2(data::Data)
     μ = zeros(data.K, data.F, data.M)
     ω = zeros(data.K, data.F, data.N)
 
-    @show dual.(con_α)
+    # @show dual.(con_α)
     # @show dual.(con_μ)
     # @show dual.(con_ω)
    

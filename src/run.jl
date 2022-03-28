@@ -1,7 +1,7 @@
-using CPLEX 
-using JuMP
+#using CPLEX 
+#using JuMP
 using DelimitedFiles
-include("mip.jl")
+#include("mip.jl")
 include("heuristic.jl")
 
 
@@ -27,7 +27,6 @@ function test()
     #global layers = functionsOrder(data,solution)
     if !isFeasible(data, bestsol)
         Bestie=orderFunctions(data,bestsol)
-        println("feasible2 : ", isFeasible(data, Bestie))
         println("feasible but not ordered2 : ", isPartiallyFeasible(data, Bestie) )
         println("feasible2 : ", isFeasible(data, Bestie))
         println("nb contrante violee2 : ",nbConstraintsViolated(data,Bestie))
@@ -38,4 +37,4 @@ function test()
     # cplexSolveMIP(data)
 end
 
-# test()
+test()

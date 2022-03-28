@@ -1,5 +1,5 @@
 include("io.jl")
-
+TOL=0.00001
 using DataStructures #Pour la PriorityQueue
 using Random
 Random.seed!(1) #initialized the fix random
@@ -200,41 +200,72 @@ end
 
 
 function areFunctionsOrdered(data::Data, solution::Solution)
-	functionsOrder = [ Int[] for _ in 1:data.K]
-	
+	functionsOrder = [ 0 for _ in 1:data.K]
+	functions=deepcopy(solution.functions)
+	isOrder=Bool[]
 	for k in 1:data.K
-		for node in solution.paths[k]
-			# println("solution.functions[",node,"] : ", solution.functions[node])
-			append!(functionsOrder[k], solution.functions[node] )
+		order=[]
+		path=deepcopy(solution.paths[k])
+		for f in data.Order[k]
+			needs=Int(ceil(data.Commodity[k,3] / data.CapacityFun[f]))
+			for i in 1:needs
+				push!(order,f)
+			end
 		end
-
-		#layers[k] = [f1,f1,f2,f3,...]
-		keepTrack = Int[]
-		for fct in data.Order[k]
-			#println("functionsOrder[",k,"] = ", functionsOrder[k])
-			f = popfirst!(functionsOrder[k])
-			while true 
-				f = popfirst!(functionsOrder[k])
-				if fct == f || isempty(functionsOrder[k])
-					#println("fct = ", fct, " - f = ", f, " - functionsOrder[",k,"] = ", functionsOrder[k])
+		while 1<=length(path)
+			if order[1] in functions[path[1]] 
+				popfirst!(order)
+				if length(order)==0
 					break
 				end
-			end
-			if fct == f
-				push!(keepTrack, f)
-				#println("keepTrack : ", keepTrack)
-				continue
-			else #isempty(layers[k])
-				return false
+				
+			else
+				popfirst!(path)
+				
 			end
 		end
+		functionsOrder[k]=length(order)
+		#println("debug   ",functionsOrder[k])
+		if functionsOrder[k]>0
+			push!(isOrder, false)
+		end
 	end
-	return true
+	ordered=all(isOrder)
+	return ordered, functionsOrder
+
+		# for node in solution.paths[k]
+		# 	# println("solution.functions[",node,"] : ", solution.functions[node])
+		# 	append!(functionsOrder[k], solution.functions[node] )
+		# end
+
+		#layers[k] = [f1,f1,f2,f3,...]
+	# 	keepTrack = Int[]
+	# 	for fct in data.Order[k]
+	# 		#println("functionsOrder[",k,"] = ", functionsOrder[k])
+	# 		f = popfirst!(functionsOrder[k])
+	# 		while true 
+	# 			f = popfirst!(functionsOrder[k])
+	# 			if fct == f || isempty(functionsOrder[k])
+	# 				#println("fct = ", fct, " - f = ", f, " - functionsOrder[",k,"] = ", functionsOrder[k])
+	# 				break
+	# 			end
+	# 		end
+	# 		if fct == f
+	# 			push!(keepTrack, f)
+	# 			#println("keepTrack : ", keepTrack)
+	# 			continue
+	# 		else #isempty(layers[k])
+	# 			return false
+	# 		end
+	# 	end
+	# end
+	# return true
 end
 
 """ Renvoie true si la solution est réalisable """
 function isFeasible(data::Data, solution::Solution)
-	return areFunctionsOrdered(data,solution) && AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
+	areOrdered, orders = areFunctionsOrdered(data,solution)
+	return areOrdered && AllFunctionsPlaced(data,solution) && ExclCstRespected(data,solution)
 end
 """compute the extra latency of solution"""
 function maxLatency(data::Data,solution::Solution)
@@ -321,7 +352,7 @@ function neighborhood(data::Data, solution::Solution)
 	return selectedNeighbors
 end
 """Function to calculate the cost of the heuristic solution"""
-function costHeuristic(data::Data, solution::Solution,alpha::Int64=100,beta::Int64=100)
+function costHeuristic(data::Data, solution::Solution,alpha::Int64=100,beta::Int64=100,gamma::Int64=100)
 	costOpenNode=0
 	costFunctions=0
 	for i in 1:data.N
@@ -334,7 +365,9 @@ function costHeuristic(data::Data, solution::Solution,alpha::Int64=100,beta::Int
 	end	
 	costConstV=nbConstraintsViolated(data,solution)
 	costExtraLatency=maxLatency(data,solution)
-	finalCost=costOpenNode+costFunctions+alpha*costConstV+beta*costExtraLatency
+	ord, orderFunc=areFunctionsOrdered(data,solution)
+	ordCost=sum(orderFunc)
+	finalCost=costOpenNode+costFunctions+alpha*costConstV+beta*costExtraLatency+gamma*ordCost
 
 end
 

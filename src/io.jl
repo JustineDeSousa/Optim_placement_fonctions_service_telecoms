@@ -33,7 +33,7 @@ mutable struct Data
         # ---------------------
         # reading "Graph.txt"
         # ---------------------
-        println("reading ", instance * "Graph.txt")
+        # println("reading ", instance * "Graph.txt")
         datafile = open(instance * "Graph.txt")
         readline(datafile)
         N = parse(Int64, split(readline(datafile), " ")[2])
@@ -80,7 +80,7 @@ mutable struct Data
         # ---------------------
         # reading "Commodity.txt"
         # ---------------------
-        println("reading ", instance * "Commoodity.txt")
+        # println("reading ", instance * "Commoodity.txt")
         Commodity = Array{Float64, 2}(undef, 0, 4) #TODO : category
         datafile = open(instance * "Commodity.txt")
         readline(datafile)
@@ -101,7 +101,7 @@ mutable struct Data
         # ------------------------
         # reading "Functions.txt"
         # ------------------------
-        println("reading ", instance * "Functions.txt")
+        # println("reading ", instance * "Functions.txt")
         datafile = open(instance * "Functions.txt")
         readline(datafile)
         F = parse(Int64, split(readline(datafile), " ")[2])
@@ -127,7 +127,7 @@ mutable struct Data
         # ------------------------
         # reading "Fct_commod.txt"
         # ------------------------
-        println("reading ", instance * "Fct_commod.txt")
+        # println("reading ", instance * "Fct_commod.txt")
         Order = [[] for _ in 1:K]
         Layer = [0 for _ in 1:K]
         datafile = open(instance * "Fct_commod.txt")
@@ -153,7 +153,7 @@ mutable struct Data
         # ------------------------
         # reading "Affinity.txt"
         # ------------------------
-        println("reading ", instance * "Affinity.txt")
+        # println("reading ", instance * "Affinity.txt")
         Affinity = [[] for _ in 1:K]
         datafile = open(instance * "Affinity.txt")
         data = readlines(datafile)
@@ -206,6 +206,23 @@ end
 mutable struct Solution
     paths::Vector{Vector{Int}}
     functions::Vector{Vector{Int}}
+    cost::Float64
+    nb_it::Int
+    resolution_time::Float64
+    function cost(data, functions)
+        costOpenNodes = sum( data.CostNode[ isempty.(functions) .== false ] )
+        costFunctions = sum( data.CostFun[f,i] for i in 1:data.N for f in functions[i] )
+        return costOpenNodes + costFunctions
+    end
+    function Solution(paths::Vector{Vector{Int}}, functions::Vector{Vector{Int}}, data::Data)
+        new(paths, functions, cost(data,functions), 0, 0.)
+    end
+    function Solution(paths::Vector{Vector{Int}}, functions::Vector{Vector{Int}}, data::Data, nb_it::Int, resolution_time::Float64)
+        new(paths, functions, cost(data,functions), nb_it, resolution_time)
+    end
+    function Solution(solution::Solution, data::Data, nb_it, resolution_time)
+        new(solution.paths, solution.functions, cost(data, solution.functions), nb_it, resolution_time)
+    end
 end
 
 

@@ -5,34 +5,6 @@ include("io.jl")
 TOL = 0.00001
 
 
-
-# function tryconf()
-#     model = Model(CPLEX.Optimizer)  # You must use a solver that supports conflict refining/IIS
-#     # computation, like CPLEX or Gurobi
-#     # for example, using Gurobi; model = Model(Gurobi.Optimizer)
-#     @variable(model, x >= 0)
-#     @constraint(model, c1, x >= 2)
-#     @constraint(model, c2, x <= 1)
-#     optimize!(model)
-
-#     # termination_status(model) will likely be INFEASIBLE,
-#     # depending on the solver
-
-#     compute_conflict!(model)
-
-#     conflict_constraint_list = ConstraintRef[]
-#     for (F, S) in list_of_constraint_types(model)
-#         for con in all_constraints(model, F, S)
-#             if MOI.get(model, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
-#                 push!(conflict_constraint_list, con)
-#                 println(con)
-#             end
-#         end
-#     end
-
-# end
-
-
 function cplexSolveMIP(data::Data, opt = true, LP = false)
     solP = [[] for _ in 1:data.K]
 

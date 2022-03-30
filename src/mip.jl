@@ -5,39 +5,11 @@ include("io.jl")
 TOL = 0.00001
 
 
-
-# function tryconf()
-#     model = Model(CPLEX.Optimizer)  # You must use a solver that supports conflict refining/IIS
-#     # computation, like CPLEX or Gurobi
-#     # for example, using Gurobi; model = Model(Gurobi.Optimizer)
-#     @variable(model, x >= 0)
-#     @constraint(model, c1, x >= 2)
-#     @constraint(model, c2, x <= 1)
-#     optimize!(model)
-
-#     # termination_status(model) will likely be INFEASIBLE,
-#     # depending on the solver
-
-#     compute_conflict!(model)
-
-#     conflict_constraint_list = ConstraintRef[]
-#     for (F, S) in list_of_constraint_types(model)
-#         for con in all_constraints(model, F, S)
-#             if MOI.get(model, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
-#                 push!(conflict_constraint_list, con)
-#                 println(con)
-#             end
-#         end
-#     end
-
-# end
-
-
-function cplexSolveMIP(data::Data, opt = true, LP = false)
+function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
     solP = [[] for _ in 1:data.K]
 
     # modelization
-    M = Model(CPLEX.Optimizer) 
+    M = Model(CPLEX.Optimizer)
 
     # variable
     @variable(M, x[i=1:data.N, j=1:data.N, k=1:data.K, c=1:data.Layer[k]], Bin)
@@ -50,17 +22,20 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
 
     # objective function
     if opt
-        println("--------------------optimization--------------------")
-
+        if verbose
+            println("--------------------optimization--------------------")
+        end
         @objective(M, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
-            sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
+                           sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
         )
     else
         # constant objective for feasible sol only
-        println("--------------------feasible--------------------")
+        if verbose
+            println("--------------------feasible--------------------")
+        end
         @objective(M, Min, 1)
     end
-    
+
     # ------------------
     # flux constraints
     # ------------------
@@ -69,20 +44,20 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
         t = round(Int, data.Commodity[k, 2])
 
         # conversation flux at s
-        @constraint(M, sum(sum(x[s, j, k, c] for j in 1:data.N if data.Adjacent[s, j]) - 
-            sum(x[j, s, k, c] for j in 1:data.N if data.Adjacent[j, s]) for c in 1:data.Layer[k]) == 1)
+        @constraint(M, sum(sum(x[s, j, k, c] for j in 1:data.N if data.Adjacent[s, j]) -
+                           sum(x[j, s, k, c] for j in 1:data.N if data.Adjacent[j, s]) for c in 1:data.Layer[k]) == 1)
 
         # conversation flux at t
-        @constraint(M, sum(sum(x[t, j, k, c] for j in 1:data.N if data.Adjacent[t, j]) - 
-            sum(x[j, t, k, c] for j in 1:data.N if data.Adjacent[j, t]) for c in 1:data.Layer[k]) == -1)
+        @constraint(M, sum(sum(x[t, j, k, c] for j in 1:data.N if data.Adjacent[t, j]) -
+                           sum(x[j, t, k, c] for j in 1:data.N if data.Adjacent[j, t]) for c in 1:data.Layer[k]) == -1)
 
         # conversation flux at each node
         for i in 1:data.N
             if i == s || i == t
                 continue
             end
-            @constraint(M, sum(sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
+            @constraint(M, sum(sum(x[i, j, k, c] for j in 1:data.N if data.Adjacent[i, j]) -
+                               sum(x[j, i, k, c] for j in 1:data.N if data.Adjacent[j, i]) for c in 1:data.Layer[k]) == 0)
         end
 
 
@@ -93,20 +68,20 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
         # first layer
         for i in 1:data.N
             if i == s
-                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) - 
-                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) -
+                               sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) == -1 + x[i, i, k, 1])
             else
-                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) == 
-                    sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1] )
+                @constraint(M, sum(x[j, i, k, 1] for j in 1:data.N if data.Adjacent[j, i]) ==
+                               sum(x[i, j, k, 1] for j in 1:data.N if data.Adjacent[i, j]) + x[i, i, k, 1])
             end
-            
+
         end
 
 
         # intermediate from 2 to n layers
         for i in 1:data.N
-            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) - 
-                sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
+            @constraint(M, [c in 1:data.Layer[k]-1], sum(x[i, j, k, c+1] for j in 1:data.N if data.Adjacent[i, j]) -
+                                                     sum(x[j, i, k, c+1] for j in 1:data.N if data.Adjacent[j, i]) + x[i, i, k, c+1] == x[i, i, k, c])
         end
         # TODO : it seems that these two constr are identical !
         # for i in 1:data.N
@@ -129,20 +104,20 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
 
 
     # constraint maximal latency 
-    @constraint(M, [k in 1:data.K], sum( sum(data.LatencyMat[a, 3] * x[round(Int, data.LatencyMat[a, 1]), round(Int, data.LatencyMat[a, 2]), k, c]
-    for a in 1:data.M) for c in 1:data.Layer[k] ) <= data.Commodity[k, 4])
-    
+    @constraint(M, [k in 1:data.K], sum(sum(data.LatencyMat[a, 3] * x[round(Int, data.LatencyMat[a, 1]), round(Int, data.LatencyMat[a, 2]), k, c]
+                                            for a in 1:data.M) for c in 1:data.Layer[k]) <= data.Commodity[k, 4])
 
-    function lay(k::Int64,f::Int64, data::Data)
+
+    function lay(k::Int64, f::Int64, data::Data)
         """ return a list of layers where f appears for commodity k"""
         return [l for l in 1:data.Layer[k] if data.Order[k][l] == f]
     end
 
     # constraint function capacitiy
     @constraint(M, [i in 1:data.N, f in 1:data.F], sum(x[i, i, k, c] * round(Int, data.Commodity[k, 3])
-        for k in 1:data.K, c in lay(k, f, data)) <= data.CapacityFun[f] * y[f, i])
-    
-    
+                                                       for k in 1:data.K, c in lay(k, f, data)) <= data.CapacityFun[f] * y[f, i])
+
+
     # constraint of variable u
     @constraint(M, [i in 1:data.N], u[i] <= sum(y[f, i] for f in 1:data.F))
 
@@ -167,12 +142,12 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
             end
             layer += 1
         end
-        if c==0 || c_ ==0
+        if c == 0 || c_ == 0
             error("No correpondent function found ! ")
         end
         @constraint(M, [i in 1:data.N], x[i, i, k, c_] <= 1 - x[i, i, k, c])
     end
-    
+
     # for each layer, at least one function is installed
     @constraint(M, [k in 1:data.K, c in 1:data.Layer[k]], sum(x[i, i, k, c] for i in 1:data.N) == 1)
 
@@ -183,32 +158,34 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
     # println(solution_summary(M))
 
     #exploredNodes = MOI.get(backend(M), MOI.NodeCount())
-    
-    solveTime = MOI.get(M, MOI.SolveTime())
+
+    solveTime = solve_time(M)
 
     # status of model
     status = termination_status(M)
-    isOptimal = status==MOI.OPTIMAL
+    isOptimal = status == MOI.OPTIMAL
 
     # display solution
-    println("isOptimal ? ", isOptimal)
-    println("solveTime = ", solveTime)
-
+    if verbose
+        println("isOptimal ? ", isOptimal)
+        println("solveTime = ", solveTime)
+    end
     compute_conflict!(M)
     obj_val = 0.0
-    solveTime = 0.0
 
     if has_values(M)
         # GAP = MOI.get(M, MOI.RelativeGap())
-        obj_val = round(objective_value(M), digits = 2)
+        obj_val = round(objective_value(M), digits=2)
         # best_bound = objective_bound(M)
-        solveTime = round(MOI.get(M, MOI.SolveTime()), digits = 2)
+        solveTime = round(solve_time(M), digits=2)
 
-        println("obj_val = ", obj_val)
-        # println("best_bound = ", best_bound)
+        if verbose
+            println("obj_val = ", obj_val)
+        end
+            # println("best_bound = ", best_bound)
         # println("GAP = ", GAP)
         if LP
-            return (solP, obj_val)
+            return (solP, obj_val, round(solve_time(M),digits=2))
         end
 
         commodities_path = [[] for _ in 1:data.K] # Array{Array{Tuple{Int64,Int64},1},1}()
@@ -225,7 +202,7 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
 
             commodities_jump[k] = [i for i in 1:data.N, c in 1:data.Layer[k] if value(x[i, i, k, c]) > TOL]
 
-            commodities_path[k] = [(i, j) for c in 1:data.Layer[k], i in 1:data.N, j in 1:data.N if i != j && value(x[i,j,k,c]) > TOL]
+            commodities_path[k] = [(i, j) for c in 1:data.Layer[k], i in 1:data.N, j in 1:data.N if i != j && value(x[i, j, k, c]) > TOL]
         end
 
 
@@ -235,11 +212,13 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
             end
         end
         # println("y = ", value.(y))
-        
+
         # check feasibility
         isFeasible = verificationMIP(data, commodities_path, fun_placement, commodities_jump)
-        println("isFeasible ? ", isFeasible)
-
+        # println("isFeasible ? ", isFeasible)
+        if isOptimal != isFeasible
+            error("MIP sol isOptimal ? ", isOptimal, " but isFeasible ? ", isFeasible)
+        end
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -256,20 +235,21 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
     end
 
     if opt
-        return (solP, obj_val)
-    else
-        for k in 1:data.K
-            χ = zeros(Int, data.N, data.N, data.Layer[k])
-            for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
-                if value(x[i,j,k,c]) > TOL
-                    χ[i, j, c] = 1
-                end
-            end
-            append!(solP[k], [χ])
-        end
+        return (solP, obj_val, solveTime)
+    # else
+    #     for k in 1:data.K
+    #         χ = zeros(Int, data.N, data.N, data.Layer[k])
+    #         for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
+    #             if value(x[i, j, k, c]) > TOL
+    #                 χ[i, j, c] = 1
+    #             end
+    #         end
+    #         append!(solP[k], [χ])
+    #     end
 
-        return (solP, obj_val)
+    #     return (solP, obj_val, solveTime)
     end
+    return (solP, obj_val, solveTime)
 end
 
 
@@ -339,7 +319,7 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
             return false
         end
     end
-    
+
     return true
 end
 
@@ -360,19 +340,19 @@ function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Dat
         # println("vertices : ", vertices)
 
 
-        isVisited = Dict(i=>false for i in vertices)
+        isVisited = Dict(i => false for i in vertices)
         todo = []
-    
+
         # pick up a source
         s = round(Int, data.Commodity[k, 1])
         append!(todo, s)
 
-        while size(todo, 1) >0
+        while size(todo, 1) > 0
             v = pop!(todo)
-            if ! isVisited[v] 
+            if !isVisited[v]
                 isVisited[v] = true
                 for u in vertices
-                    if data.Adjacent[v, u] && ! isVisited[u]
+                    if data.Adjacent[v, u] && !isVisited[u]
                         append!(todo, u)
                     end
                 end
@@ -380,7 +360,7 @@ function isConnectedComponent(commodities_path::Array{Array{Any,1},1}, data::Dat
         end
 
         for v in vertices
-            if ! isVisited[v]
+            if !isVisited[v]
                 return false
             end
         end

@@ -151,7 +151,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     end
 
     if opt
-        # println("--------------------optimization--------------------")
+        println("--------------------optimization--------------------")
         @objective(SM, Min,
             sum(β[i, f] * x[i, i, c] * round(Int, data.Commodity[k, 3])
                 for i in 1:data.N, f in data.Order[k], c in lay(k, f, data)
@@ -160,12 +160,12 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
 
     elseif feasib == 0
         # constant
-        # println("--------------------feasible--------------------")
+        println("--------------------feasible0--------------------")
         @objective(SM, Max, -1)
 
     elseif feasib == 1
         # avoid to install too many functions on one node
-        # println("--------------------feasible--------------------")
+        println("--------------------feasible1--------------------")
         @variable(SM, extra >= 0, Int)
 
         @objective(SM, Max, -extra - 1)
@@ -176,12 +176,12 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
 
     elseif feasib == 2
         # the shortest path length
-        # println("--------------------feasible--------------------")
+        println("--------------------feasible2--------------------")
         @objective(SM, Max, -sum(x))
 
     elseif feasib == 3
         # the longest path
-        # println("--------------------feasible--------------------")
+        println("--------------------feasible3--------------------")
         @objective(SM, Min, -sum(x))
     end
 
@@ -286,7 +286,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     # display solution
     # println("isOptimal ? ", isOptimal)
 
-    if has_values(SM) #&& isOptimal
+    if has_values(SM) && isOptimal
         GAP = MOI.get(SM, MOI.RelativeGap())
         # println("GAP : ", GAP)
         reduced_cost = objective_value(SM) - α
@@ -315,12 +315,12 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
             end
         end
     else
-        return (false, [], [])
+        return (new_col, χ)
         @error "col_gen1.jl : sub-problem has no optimal solution !"
     end
 
     # println("χ : ", χ)
-    return (true, new_col, χ)
+    return (new_col, χ)
 end
 
 
@@ -336,7 +336,7 @@ function column_genaration1(data::Data)
     # step 1 : sol initial
     # ---------------------
     ite = 0
-    # @info "ite = ", ite
+    @info "ite = ", ite
     (solP, obj_val) = cplexSolveMIP(data, opt = false)
 
     global P = [solP[k] for k in 1:data.K]
@@ -344,18 +344,17 @@ function column_genaration1(data::Data)
 
     for feasib in [0, 1, 2, 3]
         for k in 1:data.K
-            # println("\n commodity k : ", k, " feasib : ", feasib)
+            println("\n commodity k : ", k, " feasib : ", feasib)
             α = zeros((data.K))
             β = zeros(data.N, data.F)
             
-            (test, new_col, χ) = sub_problem1(data, k, α[k], β, false, feasib)
-            if !test
-                return @show (Inf, Inf, Inf)
+            (new_col, χ) = sub_problem1(data, k, α[k], β, false, feasib)
+            if new_col
+                append!(P[k], [χ])
+                # @show new_col, χ
+                # @show P[k]
             end
-            # @show new_col, χ
 
-            append!(P[k], [χ])
-            # @show P[k]
         end
     end
 
@@ -375,7 +374,7 @@ function column_genaration1(data::Data)
         end
         ite += 1
         # println("\n\n ---------------")
-        # @info "ite = $ite"
+        @info "ite = $ite"
         # println("---------------\n")
         # @show size(P, 1)
 

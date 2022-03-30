@@ -360,7 +360,8 @@ function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, �
             end
         end
     else
-        error("col_gen2.jl : sub-problem has no optimal solution !")
+        return (new_col, χ)
+        @error "col_gen2.jl : sub-problem has no optimal solution !"
     end
 
     # println("χ : ", χ)
@@ -395,9 +396,11 @@ function column_genaration2(data::Data)
 
             (new_col, χ) = sub_problem2(data, k, α[k], μ, ω, false, feasib)
             # @show new_col, χ
-
-            append!(P′[k], [χ])
-            # @show P′[k]
+            if new_col
+                append!(P′[k], [χ])
+                # @show P′[k]
+            end
+        
         end
     end
 

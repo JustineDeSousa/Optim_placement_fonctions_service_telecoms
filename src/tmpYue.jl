@@ -43,11 +43,17 @@ function test()
     sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany", "newyork", "abilene"]
 
     for num in 1:10
-        global data = Data("di-yuan", num) 
+        global data = Data("atlanta", num) 
 
-        # cplexSolveMIP(data)
+        # @info "instance$num"
+        # println("\n\nMIP ")
+        # (solP, obj_v) = cplexSolveMIP(data)
+        # @info "obj_v = ", obj_v
+
         @info "instance$num"
-        column_genaration1(data)
+        println("\n\nDW1 ")
+        (DW_bound, ite, solved_time) = column_genaration1(data)
+        @info "DW_bound = ", DW_bound
     end
 
 end
@@ -73,18 +79,18 @@ function test_col_gen1()
 
 
     # big data
-    global data = Data("pdh", 2) 
+    global data = Data("atlanta", 5) 
 
     (DW_bound, ite, solved_time) = column_genaration1(data)
     @info "DW_bound = ", DW_bound
 
-    println("\n\nLP bound ")
-    (solP, LP_Bound) = cplexSolveMIP(data, true, true)
-    @info "LP_Bound = ", LP_Bound
+    # println("\n\nLP bound ")
+    # (solP, LP_Bound) = cplexSolveMIP(data, LP=true)
+    # @info "LP_Bound = ", LP_Bound
 
-    println("\n\nMIP ")
-    (solP, obj_v) = cplexSolveMIP(data)
-    @info "obj_v = ", obj_v
+    # println("\n\nMIP ")
+    # (solP, obj_v) = cplexSolveMIP(data)
+    # @info "obj_v = ", obj_v
 
 end
 
@@ -115,7 +121,7 @@ function test_col_gen2()
     @info "DW2_bound = ", DW2_bound
 
     println("\n\nLP bound ")
-    (solP, LP_Bound) = cplexSolveMIP(data, true, true)
+    (solP, LP_Bound) = cplexSolveMIP(data, LP=true)
     @info "LP_Bound = ", LP_Bound
 
     println("\n\nMIP ")

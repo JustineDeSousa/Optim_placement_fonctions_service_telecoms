@@ -330,8 +330,7 @@ end
 Algorithm column generation
 """
 function column_genaration1(data::Data)
-    start = time()
-    convergence = []
+
     # ---------------------
     # step 1 : sol initial
     # ---------------------
@@ -358,6 +357,9 @@ function column_genaration1(data::Data)
         end
     end
 
+    start = time()
+    convergence = []
+    
     DW = Inf
 
     # println("\n\n\n")

@@ -376,8 +376,6 @@ end
 Algorithm column generation
 """
 function column_genaration2(data::Data)
-    start = time()
-    convergence = []
 
     # ---------------------
     # step 1 : sol initial
@@ -404,6 +402,9 @@ function column_genaration2(data::Data)
         end
     end
 
+
+    start = time()
+    convergence = []
     DW2 = Inf
 
     # println("\n\n\n")

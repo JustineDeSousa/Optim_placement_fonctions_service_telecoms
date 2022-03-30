@@ -43,11 +43,16 @@ function test()
     sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany", "newyork", "abilene"]
 
     for num in 1:10
-        global data = Data("di-yuan", num) 
+        global data = Data("atlanta", num) 
 
-        # cplexSolveMIP(data)
         @info "instance$num"
-        column_genaration1(data)
+        println("\n\nMIP ")
+        (solP, obj_v) = cplexSolveMIP(data)
+        @info "obj_v = ", obj_v
+
+        @info "instance$num"
+        (DW_bound, ite, solved_time) = column_genaration1(data)
+        @info "DW_bound = ", DW_bound
     end
 
 end

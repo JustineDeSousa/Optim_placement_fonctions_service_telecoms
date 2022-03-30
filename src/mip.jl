@@ -239,9 +239,7 @@ function cplexSolveMIP(data::Data, opt = true, LP = false)
         # check feasibility
         isFeasible = verificationMIP(data, commodities_path, fun_placement, commodities_jump)
         println("isFeasible ? ", isFeasible)
-        if isOptimal != isFeasible
-            error("MIP sol isOptimal ? ", isOptimal, " but isFeasible ? ", isFeasible)
-        end
+
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
@@ -286,27 +284,26 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
     # println("commodities_jump : ", commodities_jump)
 
     if isConnectedComponent(commodities_path, data) == false
-        error("Commodity path not valid !")
+        @error "Commodity path not valid !"
         return false
     end
 
     # maximal latency satisfied ?
     for k in 1:data.K
-        acc_lat = 0
+        acc_lat = 0.0
         for (u, v) in commodities_path[k]
             acc_lat += data.Latency[u, v]
         end
-        if acc_lat - data.Commodity[k, 4] > TOL
-            # println("k : ", k, "  acc_lat = ", acc_lat, "; data.Commodity[k, 4] = ", data.Commodity[k, 4])
-            error("maximal latency violated !")
-            return false
+        if round(acc_lat, digits = 3) - round(data.Commodity[k, 4], digits = 3) >= TOL
+            println("k : ", k, "  acc_lat = ", acc_lat, "; data.Commodity[k, 4] = ", data.Commodity[k, 4])
+            @error "maximal latency violated !"
         end
     end
 
     # node capacity satisfied ?
     for i in 1:data.N
         if sum(fun_placement[:, i]) > data.CapacityNode[i]
-            error("node capacity violated !")
+            @error "node capacity violated !"
             return false
         end
     end
@@ -316,7 +313,7 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
     # println("residual_capa : ", residual_capa)
     for k in 1:data.K
         if size(commodities_jump[k], 1) < size(data.Order[k], 1)
-            error("functions ordering violated ! ")
+            @error "functions ordering violated ! "
             false
         end
         for v in commodities_jump[k]
@@ -324,7 +321,7 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
             if residual_capa[v] < 0
                 # println("commodities_jump[$k", "] : ", commodities_jump[k])
                 # println("v : ", v, "residual_capa[v] = ", residual_capa[v])
-                error("functions capacity not sufficient for demand !")
+                @error "functions capacity not sufficient for demand !"
                 return false
             end
         end
@@ -338,7 +335,7 @@ function verificationMIP(data::Data, commodities_path::Array{Array{Any,1},1}, fu
         f = data.Affinity[k][1]
         g = data.Affinity[k][2]
         if commodities_jump[k][f] == commodities_jump[k][g]
-            error("Affinity violated by commodity $k")
+            @error "Affinity violated by commodity $k"
             return false
         end
     end

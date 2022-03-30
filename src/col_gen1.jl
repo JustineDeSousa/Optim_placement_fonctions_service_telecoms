@@ -286,7 +286,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     # display solution
     println("isOptimal ? ", isOptimal)
 
-    if has_values(SM) #&& isOptimal
+    if has_values(SM) && isOptimal
         GAP = MOI.get(SM, MOI.RelativeGap())
         println("GAP : ", GAP)
         reduced_cost = objective_value(SM) - α

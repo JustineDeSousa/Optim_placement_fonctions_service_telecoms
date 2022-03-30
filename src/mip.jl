@@ -236,19 +236,20 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
 
     if opt
         return (solP, obj_val, solveTime)
-    else
-        for k in 1:data.K
-            χ = zeros(Int, data.N, data.N, data.Layer[k])
-            for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
-                if value(x[i, j, k, c]) > TOL
-                    χ[i, j, c] = 1
-                end
-            end
-            append!(solP[k], [χ])
-        end
+    # else
+    #     for k in 1:data.K
+    #         χ = zeros(Int, data.N, data.N, data.Layer[k])
+    #         for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
+    #             if value(x[i, j, k, c]) > TOL
+    #                 χ[i, j, c] = 1
+    #             end
+    #         end
+    #         append!(solP[k], [χ])
+    #     end
 
-        return (solP, obj_val, solveTime)
+    #     return (solP, obj_val, solveTime)
     end
+    return (solP, obj_val, solveTime)
 end
 
 

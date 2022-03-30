@@ -6,7 +6,7 @@ TOL = 0.00001
 
 
 function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
-    solP = [[] for _ in 1:data.K]
+    solP = [zeros(Int, data.N, data.N, data.Layer[k]) for k in 1:data.K]
 
     # modelization
     M = Model(CPLEX.Optimizer)
@@ -220,6 +220,23 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
             error("MIP sol isOptimal ? ", isOptimal, " but isFeasible ? ", isFeasible)
         end
 
+        if opt
+            return (solP, obj_val, solveTime)
+        else 
+            # return feasible routes
+            for k in 1:data.K
+                # χ = zeros(Int, data.N, data.N, data.Layer[k])
+                for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
+                    if value(x[i, j, k, c]) > TOL
+                        solP[k][i, j, c] = 1
+                    end
+                end
+                # append!(solP[k], [χ])
+            end
+    
+            return (solP, obj_val, solveTime)
+        end
+
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]
         for (F, S) in list_of_constraint_types(M)
@@ -232,23 +249,10 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
         end
 
         error("No conflict could be found for an infeasible model.")
-    end
-
-    if opt
-        return (solP, obj_val, solveTime) # solP is empty here
-    else 
-        # return feasible routes
-        for k in 1:data.K
-            χ = zeros(Int, data.N, data.N, data.Layer[k])
-            for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
-                if value(x[i, j, k, c]) > TOL
-                    χ[i, j, c] = 1
-                end
-            end
-            append!(solP[k], [χ])
-        end
-
+    
+    else
         return (solP, obj_val, solveTime)
+        @error "mip.jl model has no solution ! "
     end
 
 end

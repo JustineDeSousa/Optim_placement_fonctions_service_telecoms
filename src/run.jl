@@ -145,7 +145,10 @@ function write_table()
     end
     write_table_tex("../res/mip_bounds", "Comparaison entre les bornes obtenues et la valeur optimale", titles, rows, num_col_titles = [1,2,3,3,3,3], subtitles = subtitles, alignments = "c|cc|ccc|ccc|ccc|ccc", maxRawsPerPage=37)
 end
+
+solve_instances("MIP")
 solve_instances("LP")
 solve_instances("DW1")
 solve_instances("DW2")
+solve_instances("Recuit")
 write_table()

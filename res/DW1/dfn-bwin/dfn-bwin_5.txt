@@ -1,0 +1,5 @@
+path = Any[]
+functions = Any[]
+cost = 84993.6
+nb_it = 2
+resolution_time = 1.38

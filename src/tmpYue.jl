@@ -43,7 +43,7 @@ function test()
     sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany", "newyork", "abilene"]
 
     for num in 1:10
-        global data = Data("atlanta", num) 
+        global data = Data("dfn-bwin", num) 
 
         # @info "instance$num"
         # println("\n\nMIP ")
@@ -79,10 +79,10 @@ function test_col_gen1()
 
 
     # big data
-    global data = Data("atlanta", 5) 
+    # global data = Data("atlanta", 5) 
 
-    (DW_bound, ite, solved_time) = column_genaration1(data)
-    @info "DW_bound = ", DW_bound
+    # (DW_bound, ite, solved_time) = column_genaration1(data)
+    # @info "DW_bound = ", DW_bound
 
     # println("\n\nLP bound ")
     # (solP, LP_Bound) = cplexSolveMIP(data, LP=true)

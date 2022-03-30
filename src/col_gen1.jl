@@ -286,7 +286,7 @@ function sub_problem1(data::Data, k::Int64, α::Float64, β::Array{Float64,2}, o
     # display solution
     # println("isOptimal ? ", isOptimal)
 
-    if has_values(SM) && isOptimal
+    if has_values(SM)
         GAP = MOI.get(SM, MOI.RelativeGap())
         # println("GAP : ", GAP)
         reduced_cost = objective_value(SM) - α
@@ -348,11 +348,11 @@ function column_genaration1(data::Data)
             β = zeros(data.N, data.F)
             
             (new_col, χ) = sub_problem1(data, k, α[k], β, false, feasib)
-            if new_col
-                append!(P[k], [χ])
+            # if new_col
+                append!(P[k], [χ]) # if new_col is false, χ is vector of all zeros
                 # @show new_col, χ
                 # @show P[k]
-            end
+            # end
 
         end
     end

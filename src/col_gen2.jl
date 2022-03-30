@@ -17,9 +17,9 @@ function master_problem2(data::Data)
 
     # the number of feasible paths for each commodity k
     sizeP = [size(P′[k], 1) for k in 1:data.K]
-    @show sizeP
+    # @show sizeP
 
-    MP = Model(CPLEX.Optimizer) 
+    MP = Model(CPLEX.Optimizer)
 
     # -------------------------------------------
     # relaxed vars y_fi, u_i, b^k_fi, a^k_fi
@@ -41,7 +41,7 @@ function master_problem2(data::Data)
     # objective
     # -------------
     @objective(MP, Min, sum(data.CostNode[i] * u[i] for i in 1:data.N) +
-                sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
+                        sum(data.CostFun[f, i] * y[f, i] for f in 1:data.F, i in 1:data.N)
     )
 
     # ------------
@@ -62,8 +62,8 @@ function master_problem2(data::Data)
     # --------------------
     # capacity function
     # --------------------
-    @constraint(MP, [f in 1:data.F, i in 1:data.N], 
-        sum(round(Int, data.Commodity[k, 3]) * a[k, f, i] for k in 1:data.K) ≤ data.CapacityFun[f] * y[f, i] 
+    @constraint(MP, [f in 1:data.F, i in 1:data.N],
+        sum(round(Int, data.Commodity[k, 3]) * a[k, f, i] for k in 1:data.K) ≤ data.CapacityFun[f] * y[f, i]
     )
 
     # --------------------
@@ -119,19 +119,19 @@ function master_problem2(data::Data)
             f2 = data.Order[k][j]
             @constraint(MP, [i in 1:data.N], b[k, f2, i] ≤ b[k, f1, i])
         end
-        
+
     end
 
     # ----------------------------------------------------------------------------------
     # ∀ (i,j), f installed on j <=> f not installed before i but exactly installed on j
     # ----------------------------------------------------------------------------------
     #TODO : check if it's correct
-    con_μ = @constraint(MP, 
+    con_μ = @constraint(MP,
         [k in 1:data.K, f in Set(data.Order[k]), arc in 1:data.M],
-            sum(ρ[k, p] * P′[k][p][round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])] 
-                for p in 1:sizeP[k]) - 1 + 
-            b[k, f, round(Int, data.LatencyMat[arc, 2]) ] - b[k, f, round(Int, data.LatencyMat[arc, 1]) ] ≤
-                a[k, f, round(Int, data.LatencyMat[arc, 2]) ] 
+        sum(ρ[k, p] * P′[k][p][round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])]
+            for p in 1:sizeP[k]) - 1 +
+        b[k, f, round(Int, data.LatencyMat[arc, 2])] - b[k, f, round(Int, data.LatencyMat[arc, 1])] ≤
+        a[k, f, round(Int, data.LatencyMat[arc, 2])]
     )
 
     # -----------------------------------------------
@@ -143,7 +143,7 @@ function master_problem2(data::Data)
     # f cannot installed on i if no arc passes i
     # --------------------------------------------
     con_ω = @constraint(MP, [k in 1:data.K, f in Set(data.Order[k]), i in 1:data.N], a[k, f, i] ≤
-        sum(ρ[k, p]* sum(P′[k][p][i,j] + P′[k][p][j,i] for j in 1:data.N if data.Adjacent[i,j]) for p in 1:sizeP[k])
+                                                                                     sum(ρ[k, p] * sum(P′[k][p][i, j] + P′[k][p][j, i] for j in 1:data.N if data.Adjacent[i, j]) for p in 1:sizeP[k])
     )
 
 
@@ -153,11 +153,11 @@ function master_problem2(data::Data)
 
     # status of model
     status = termination_status(MP)
-    isOptimal = status==MOI.OPTIMAL
+    isOptimal = status == MOI.OPTIMAL
 
     # display solution
-    println("isOptimal ? ", isOptimal)
-    @info "MP status ", status
+    # println("isOptimal ? ", isOptimal)
+    # @info "MP status ", status
 
     compute_conflict!(MP)
 
@@ -165,16 +165,16 @@ function master_problem2(data::Data)
 
     if has_values(MP) && isOptimal
         LB = objective_value(MP)
-        @info "LB = ", LB
-        println("LB objective ", LB)
+        # @info "LB = ", LB
+        # println("LB objective ", LB)
 
         # @show sum(value.(ρ))
         # @show value.(u)
         # @show value.(y)
 
         for k in 1:data.K, p in 1:sizeP[k]
-            if value(ρ[k, p]) >TOL
-                @info "k, p, ρ[k, p]", k, p, ρ[k, p]
+            if value(ρ[k, p]) > TOL
+                # @info "k, p, ρ[k, p]", k, p, ρ[k, p]
             end
         end
 
@@ -184,7 +184,7 @@ function master_problem2(data::Data)
             for con in all_constraints(MP, F, S)
                 if MOI.get(MP, MOI.ConstraintConflictStatus(), con) == MOI.IN_CONFLICT
                     push!(conflict_constraint_list, con)
-                    println(con)
+                    # println(con)
                 end
             end
         end
@@ -205,7 +205,7 @@ function master_problem2(data::Data)
     # @show dual.(con_α)
     # @show dual.(con_μ)
     # @show dual.(con_ω)
-   
+
     if has_duals(MP)
         for k in 1:data.K
 
@@ -226,7 +226,7 @@ function master_problem2(data::Data)
 
         return (dual.(con_α), μ, ω, LB)
     else
-        @info has_duals(MP)
+        # @info has_duals(MP)
         error("col_gen2.jl MP has no dual vars ! ")
         return (α, μ, ω, LB)
     end
@@ -248,41 +248,41 @@ Returns :
 Args : 
     - opt : if false, then we generate feasible route only
 """
-function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, ω::Array{Float64,3}, opt=true, feasib = 0)
+function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, ω::Array{Float64,3}, opt=true, feasib=0)
     new_col = false
 
     χ = zeros(Int, data.N, data.N)
 
-    SM = Model(CPLEX.Optimizer) 
+    SM = Model(CPLEX.Optimizer)
 
     @variable(SM, x[1:data.N, 1:data.N], Bin)
 
     if opt
-        println("--------------------optimization--------------------")
-        @objective(SM, Min, 
-            sum( μ[k, f, arc] * x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 1])]
+        # println("--------------------optimization--------------------")
+        @objective(SM, Min,
+            sum(μ[k, f, arc] * x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 1])]
                 for f in Set(data.Order[k]), arc in 1:data.M
-            ) + 
-            sum( ω[k, f, i] * sum(x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])] 
-                for arc in 1:data.M if round(Int, data.LatencyMat[arc, 1])==i || round(Int, data.LatencyMat[arc, 2]) == i
-                )
+            ) +
+            sum(ω[k, f, i] * sum(x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])]
+                                 for arc in 1:data.M if round(Int, data.LatencyMat[arc, 1]) == i || round(Int, data.LatencyMat[arc, 2]) == i
+            )
                 for f in Set(data.Order[k]), i in 1:data.N
             )
         )
 
     elseif feasib == 0
         # constant
-        println("--------------------feasible--------------------")
+        # println("--------------------feasible--------------------")
         @objective(SM, Max, -1)
 
     elseif feasib == 1
         # the shortest path length
-        println("--------------------feasible--------------------")
+        # println("--------------------feasible--------------------")
         @objective(SM, Max, -sum(x))
 
     elseif feasib == 2
         # the longest path length
-        println("--------------------feasible--------------------")
+        # println("--------------------feasible--------------------")
         @objective(SM, Min, -sum(x))
     end
 
@@ -294,13 +294,13 @@ function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, �
     t = round(Int, data.Commodity[k, 2])
 
     # conversation flux at s
-    @constraint(SM, sum(x[s, j] for j in 1:data.N if data.Adjacent[s, j]) - 
-        sum(x[j, s] for j in 1:data.N if data.Adjacent[j, s]) == 1
+    @constraint(SM, sum(x[s, j] for j in 1:data.N if data.Adjacent[s, j]) -
+                    sum(x[j, s] for j in 1:data.N if data.Adjacent[j, s]) == 1
     )
 
     # conversation flux at t
-    @constraint(SM, sum(x[t, j] for j in 1:data.N if data.Adjacent[t, j]) - 
-        sum(x[j, t] for j in 1:data.N if data.Adjacent[j, t]) == -1
+    @constraint(SM, sum(x[t, j] for j in 1:data.N if data.Adjacent[t, j]) -
+                    sum(x[j, t] for j in 1:data.N if data.Adjacent[j, t]) == -1
     )
 
     # conversation flux at each node
@@ -308,8 +308,8 @@ function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, �
         if i == s || i == t
             continue
         end
-        @constraint(SM, sum(x[i, j] for j in 1:data.N if data.Adjacent[i, j]) - 
-            sum(x[j, i] for j in 1:data.N if data.Adjacent[j, i]) == 0
+        @constraint(SM, sum(x[i, j] for j in 1:data.N if data.Adjacent[i, j]) -
+                        sum(x[j, i] for j in 1:data.N if data.Adjacent[j, i]) == 0
         )
     end
 
@@ -317,8 +317,8 @@ function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, �
     # ----------------------------------
     # constraint maximal latency 
     # ----------------------------------
-    @constraint(SM, 
-        sum(data.LatencyMat[arc, 3] * x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])] 
+    @constraint(SM,
+        sum(data.LatencyMat[arc, 3] * x[round(Int, data.LatencyMat[arc, 1]), round(Int, data.LatencyMat[arc, 2])]
             for arc in 1:data.M) ≤ data.Commodity[k, 4]
     )
 
@@ -327,29 +327,29 @@ function sub_problem2(data::Data, k::Int64, α::Float64, μ::Array{Float64,3}, �
     set_silent(SM) # turn off cplex output
     optimize!(SM)
     # println(solution_summary(SM))
-    
+
     # status of model
     status = termination_status(SM)
-    isOptimal = status==MOI.OPTIMAL
+    isOptimal = status == MOI.OPTIMAL
 
     # display solution
-    println("isOptimal ? ", isOptimal)
+    # println("isOptimal ? ", isOptimal)
 
     if has_values(SM) && isOptimal
         GAP = MOI.get(SM, MOI.RelativeGap())
-        println("GAP : ", GAP)
-        println("SM obj_v : ", objective_value(SM))
+        # println("GAP : ", GAP)
+        # println("SM obj_v : ", objective_value(SM))
         reduced_cost = objective_value(SM) - α
-        println("reduced_cost : ", reduced_cost)
+        # println("reduced_cost : ", reduced_cost)
 
 
-        sol = [(i,j) for i in 1:data.N, j in 1:data.N if value(x[i, j]) > TOL ]
-        println(sol)
+        sol = [(i, j) for i in 1:data.N, j in 1:data.N if value(x[i, j]) > TOL]
+        # println(sol)
 
 
-        println()
-        @info "(k, reduced_cost) = ", k, reduced_cost
-        
+        # println()
+        # @info "(k, reduced_cost) = ", k, reduced_cost
+
         # the minimum reduced_cost is negative
         if reduced_cost <= -TOL
             new_col = true
@@ -382,20 +382,20 @@ function column_genaration2(data::Data)
     # step 1 : sol initial
     # ---------------------
     ite = 0
-    @info "ite = ", ite
+    # @info "ite = ", ite
     global P′ = [[] for _ in 1:data.K]
     # P′[k] : [χ1, χ2...] set of paths of commodity k
 
     for feasib in [0, 1, 2]
         for k in 1:data.K
-            println("\n commodity k : ", k, " feasib : ", feasib)
+            # println("\n commodity k : ", k, " feasib : ", feasib)
             α = zeros((data.K))
             μ = zeros(data.K, data.F, data.M)
             ω = zeros(data.K, data.F, data.N)
 
             (new_col, χ) = sub_problem2(data, k, α[k], μ, ω, false, feasib)
             # @show new_col, χ
-    
+
             append!(P′[k], [χ])
             # @show P′[k]
         end
@@ -403,7 +403,7 @@ function column_genaration2(data::Data)
 
     DW2 = Inf
 
-    println("\n\n\n")
+    # println("\n\n\n")
 
     # ---------------------
     # step 2 : resolve MP
@@ -416,26 +416,26 @@ function column_genaration2(data::Data)
             break
         end
         ite += 1
-        println("\n\n ---------------")
-        @info "ite = $ite"
-        println("---------------\n")
+        # println("\n\n ---------------")
+        # @info "ite = $ite"
+        # println("---------------\n")
 
-        println("\n resolve MP")
+        # println("\n resolve MP")
         (α, μ, ω, LB) = master_problem2(data)
 
         if LB < DW2
             DW2 = LB
         end
-        
+
         append!(convergence, LB)
-    
+
         # -------------------------
         # step 3 : resolve SP ∀ k
         # -------------------------
 
         for k in 1:data.K
-            println()
-            @info "(ite, k) = ", ite, k 
+            # println()
+            # @info "(ite, k) = ", ite, k
 
             if !stop[k]
                 (new_col, χ) = sub_problem2(data, k, α[k], μ, ω)
@@ -446,20 +446,20 @@ function column_genaration2(data::Data)
                     # @show size(P′[k], 1)
                 else
                     stop[k] = true
-                    @info "commodity ", k, "terminates ! \n"
+                    # @info "commodity ", k, "terminates ! \n"
                 end
             end
         end
     end
 
-    println()
-    @info "Ending with DW = ", DW2, " and with ite : ", ite
-    println()
+    # println()
+    # @info "Ending with DW = ", DW2, " and with ite : ", ite
+    # println()
 
-    solved_time = round(time() - start, digits = 2)
-    @show convergence
+    solved_time = round(time() - start, digits=2)
+    # @show convergence
 
-    return(round(DW2, digits = 2), ite, solved_time)
+    return @show (round(DW2, digits=2), ite, solved_time)
 
 
 end

@@ -1,0 +1,5 @@
+path = Vector{Any}[[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+functions = Any[]
+cost = 37637.06
+nb_it = 0
+resolution_time = 0.51

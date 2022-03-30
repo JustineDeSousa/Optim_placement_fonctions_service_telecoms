@@ -338,7 +338,7 @@ Function to order the placement of functions over a feasible path
 Renvoie un objet Solution
 """
 function orderFunctions(data::Data, solution::Solution)
-	@info "orderFunctions"
+    @info "orderFunctions"
     functions_ordered = [Int[] for i in 1:data.N]
     nonOrder = []
     functions = deepcopy(solution.functions)
@@ -428,13 +428,13 @@ function orderFunctions(data::Data, solution::Solution)
     return Solution(solution.paths, functions_ordered, data)
 end
 """ Renvoie un objet Solution """
-function recuitSimule(data::Data; tInit::Int64=500, nbIt::Int64=50, phi::Float64=0.9, tFloor::Float64=0.1, max_time::Float64=10.)
+function recuitSimule(data::Data; tInit::Int64=500, nbIt::Int64=50, phi::Float64=0.9, tFloor::Float64=0.1, max_time::Float64=10.0)
     start = time()
-	bestSol = init_solution(data, max_time)
+    bestSol = init_solution(data, max_time)
     actualSol = deepcopy(bestSol)
     T = tInit
-	nb_it = 0
-    while T >= tFloor && time()-start < max_time
+    nb_it = 0
+    while T >= tFloor && time() - start < max_time
         for k in 1:nbIt
             newSol = place_functions(data, neighborhood(data, actualSol), 10.0)
             deltaE = costHeuristic(data, newSol) - costHeuristic(data, actualSol)
@@ -449,18 +449,18 @@ function recuitSimule(data::Data; tInit::Int64=500, nbIt::Int64=50, phi::Float64
                     actualSol = deepcopy(newSol)
                 end
             end
-			nb_it += 1
-			if time()-start < max_time
-				break
-			end
+            nb_it += 1
+            if time() - start < max_time
+                break
+            end
         end
         T = phi * T
     end
     if isFeasible(data, bestSol)
         return Solution(bestSol, nb_it, time() - start)
     else
-        @time solution =  orderFunctions(data, bestSol)
-		return Solution(solution,data, nb_it, time()-start)
+        @time solution = orderFunctions(data, bestSol)
+        return Solution(solution, data, nb_it, time() - start)
     end
 end
 #################################################################################################

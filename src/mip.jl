@@ -6,7 +6,8 @@ TOL = 0.00001
 
 
 function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
-    solP = [zeros(Int, data.N, data.N, data.Layer[k]) for k in 1:data.K]
+
+    solP = [[zeros(Int, data.N, data.N, data.Layer[k])] for k in 1:data.K]
 
     # modelization
     M = Model(CPLEX.Optimizer)
@@ -228,7 +229,7 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
                 # χ = zeros(Int, data.N, data.N, data.Layer[k])
                 for i in 1:data.N, j in 1:data.N, c in 1:1:data.Layer[k]
                     if value(x[i, j, k, c]) > TOL
-                        solP[k][i, j, c] = 1
+                        solP[k][1][i, j, c] = 1
                     end
                 end
                 # append!(solP[k], [χ])

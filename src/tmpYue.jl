@@ -64,10 +64,10 @@ test the first column generation model
 """
 function test_col_gen1()
     # small test
-    # global data = Data("test1", 1, true)
+    global data = Data("test1", 1, true)
 
-    # (DW_bound, ite, solved_time) = column_genaration1(data)
-    # @info "DW_bound = ", DW_bound
+    (DW_bound, ite, solved_time) = column_genaration1(data)
+    @info "DW_bound = ", DW_bound
 
     # println("\nLP bound")
     # (solP, LP_Bound) = cplexSolveMIP(data, true, true)

@@ -413,7 +413,7 @@ function column_genaration2(data::Data)
     # step 2 : resolve MP
     # ---------------------
     stop = [false for _ in 1:data.K]
-    @show sum(stop)
+    # @show sum(stop)
 
     while sum(stop) < data.K
         if ite >= MAXITE

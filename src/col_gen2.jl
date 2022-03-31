@@ -1,4 +1,5 @@
-
+using CPLEX 
+using JuMP
 include("io.jl")
 
 MAXITE = 100

@@ -1,3 +1,4 @@
+# using Plots
 # This file contains function reading instances
 
 mutable struct Data
@@ -315,16 +316,14 @@ raw"""\documentclass[main.tex]{subfiles}
     end
 
     #FOOTER OF TABLES
-    footer = raw"""
+    footer1 = raw"""
     \end{tabular}
-}
-\caption{"""
-    footer *= caption
-    footer *= raw"""}
+}"""
+    footer2 = raw"""
 \end{table}
 \end{landscape}
 """
-
+    caption = "\caption{" * caption * "}"
     println(fout, header)
     println(fout, subheader)
     println(fout, subsubheader)
@@ -346,7 +345,7 @@ raw"""\documentclass[main.tex]{subfiles}
 
         #If we need to start a new page
         if rem(id, maxRawsPerPage) == 0
-            println(fout, footer, "\\newpage\n\\thispagestyle{empty}")
+            println(fout, footer1, footer2, "\\newpage\n\\thispagestyle{empty}")
             println(fout, header)
             println(fout, subheader)
             println(fout, subsubheader)
@@ -355,7 +354,144 @@ raw"""\documentclass[main.tex]{subfiles}
         id += 1
     end
 
-    println(fout, footer)
+    println(fout, footer1, caption, footer2)
     println(fout, "\\end{document}")
     close(fout)
 end
+
+"""
+Create a pdf file which contains a performance diagram associated to the results of the ../res folder
+Display one curve for each subfolder of the ../res folder.
+
+Arguments
+- outputFile: path of the output file
+
+Prerequisites:
+- Each subfolder must contain text files
+- Each text file correspond to the resolution of one instance
+"""
+function performanceDiagram(outputFile::String)
+    
+    resultFolder = "../res/"
+    maxSize = 0 # Maximal number of files in a subfolder
+    subfolderCount = 0  # Number of subfolders
+    folderName = Array{String, 1}()
+
+    # For each file in the result folder
+    for method in readdir(resultFolder)
+        methodPath = resultFolder * method
+        
+        # If it is a subfolder
+        if isdir(methodPath)
+            folderName = vcat(folderName, method)
+            subfolderCount += 1
+            folderSize = 10*size(readdir(methodPath), 1)
+            if maxSize < folderSize
+                maxSize = folderSize
+            end
+        end
+    end
+
+    results = Array{Float64}(undef, subfolderCount, maxSize)    # Array that will contain the resolution times (one line for each subfolder)
+
+    for i in 1:subfolderCount
+        for j in 1:maxSize
+            results[i, j] = Inf
+        end
+    end
+
+    folderCount = 0
+    maxSolveTime = 0
+
+    # For each subfolder
+    for method in readdir(resultFolder)
+        methodPath = resultFolder * method
+        if isdir(methodPath)
+            folderCount += 1
+            fileCount = 0
+
+            for instanceName in readdir(methodPath)
+                
+                path = methodPath * "/" * instanceName
+                # For each text file in the subfolders
+                for resultFile in filter(x->occursin(".txt", x), readdir(path))
+
+                    fileCount += 1
+                    @show path * "/" * resultFile
+                    include(path * "/" * resultFile)
+
+                    if cost < Inf
+                        @debug results[folderCount, fileCount] = resolution_time
+
+                        if resolution_time > maxSolveTime
+                            maxSolveTime = resolution_time
+                        end 
+                    end 
+                end 
+            end
+        end
+    end 
+
+    # Sort each row increasingly
+    @debug results
+    @debug results = sort(results, dims=2)
+    @debug size(results)
+
+    println("Max solve time: ", maxSolveTime)
+
+    # For each line to plot
+    for dim in 1: size(results, 1)
+
+        x = Array{Float64, 1}()
+        y = Array{Float64, 1}()
+
+        # x coordinate of the previous inflexion point
+        previousX = 0
+        previousY = 0
+
+        append!(x, previousX)
+        append!(y, previousY)
+            
+        # Current position in the line
+        currentId = 1
+
+        # While the end of the line is not reached 
+        while currentId != size(results, 2) && results[dim, currentId] != Inf
+            # Number of elements which have the value previousX
+            identicalValues = 1
+
+            # While the value is the same
+            while currentId < size(results, 2) && results[dim, currentId] == previousX
+                currentId += 1
+                identicalValues += 1
+            end
+
+            # Add the proper points
+            append!(x, previousX)
+            append!(y, currentId - 1)
+
+            if results[dim, currentId] != Inf
+                append!(x, results[dim, currentId])
+                append!(y, currentId - 1)
+            end
+            
+            previousX = results[dim, currentId]
+            previousY = currentId - 1
+        end
+
+        append!(x, maxSolveTime)
+        append!(y, currentId - 1)
+
+        # If it is the first subfolder
+        if dim == 1
+
+            # Draw a new plot
+            plot(x, y, label = folderName[dim], legend = :bottomright, xaxis = "Time (s)", yaxis = "Solved instances",linewidth=3)
+
+        # Otherwise 
+        else
+            # Add the new curve to the created plot
+            savefig(plot!(x, y, label = folderName[dim], linewidth=3), outputFile)
+        end 
+    end
+end 

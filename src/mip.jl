@@ -1,3 +1,5 @@
+using CPLEX 
+using JuMP
 # This file contains functions solving the multi-commodities problem using CPLEX solver
 include("io.jl")
 

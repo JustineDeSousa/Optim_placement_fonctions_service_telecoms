@@ -1,45 +1,9 @@
-using CPLEX 
-using JuMP
-# using DelimitedFiles
 include("mip.jl")
 include("col_gen1.jl")
 include("col_gen2.jl")
 include("heuristic.jl")
 
 
-
-function test()
-    global data = Data("test", 1, true)
-
-    bestsol = recuitSimule(data)
-    println("recuit Simule :", bestsol)
-    println("feasible : ", isFeasible(data, bestsol))
-    println("Cost Solution : ", costHeuristic(data, bestsol))
-    if !isFeasible(data, bestsol)
-        Bestie = orderFunctions(data, bestsol)
-        println("Cost Solution 2 : ", costHeuristic(data, Bestie))
-    end
-end
-
-
-
-function test2()
-    # small test
-    # global data = Data("test1", 1, true)
-    # cplexSolveMIP(data)
-
-
-    sub_dirs = ["pdh", "di-yuan", "atlanta", "dfn-bwin", "dfn-gwin", "nobel-germany", "newyork", "abilene"]
-
-    for num in 1:10
-        global data = Data("di-yuan", num)
-
-        # cplexSolveMIP(data)
-        @info "instance$num"
-        recuitSimule(data)
-    end
-
-end
 
 """ 
 Solve all instances in the folder "data/" 
@@ -67,6 +31,7 @@ function solve_instances(method::String; maxTime::Float64=10.0)
                     @info "MIP : " * instanceName * "_" * string(num)
                     @time (paths, cost, resolution_time) = cplexSolveMIP(data)
                     ite = 0
+                    paths = []
                     functions = []
                 elseif method == "LP"
                     @info "LP : " * instanceName * "_" * string(num)
@@ -95,7 +60,7 @@ function solve_instances(method::String; maxTime::Float64=10.0)
                     @error "The " * method * " is not supported. Please try one the following : LP, DW1, DW2, MIP or Recuit"
                 end
                 open(outputFile, "w") do fout
-                    println(fout, "path = ", paths)
+                    println(fout, "paths = ", paths)
                     println(fout, "functions = ", functions)
                     println(fout, "cost = ", cost)
                     println(fout, "nb_it = ", ite)
@@ -115,8 +80,8 @@ function write_table()
     subtitles = ["", "Temps(s)", "Valeur", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur", "GAP"]
     rows = Vector{String}[]
     for instanceName in readdir(dataFolder)
-        value_MIP = 0
         for num in 1:10
+            value_MIP = 0
             line = String[instanceName * "\\_" * string(num)]
             for method in ["MIP/", "LP/", "DW1/", "DW2/", "Recuit/"]
                 instance = resFolder * method * instanceName * "/" * instanceName * "_" * string(num) * ".txt"
@@ -126,7 +91,7 @@ function write_table()
                     results = [ string(resolution_time), string(cost) ]
                     if method == "MIP/"
                         value_MIP = cost
-                    elseif value_MIP > 0
+                    elseif 0 < value_MIP < Inf
                         GAP = round(abs(cost - value_MIP)/value_MIP * 100, digits = 2)
                         push!(results, string(GAP) * "\\%")
                     else
@@ -143,14 +108,15 @@ function write_table()
             push!(rows,line)
         end
     end
-    write_table_tex("../res/mip_bounds", "Comparaison entre les bornes obtenues et la valeur optimale", titles, rows, num_col_titles = [1,2,3,3,3,3], subtitles = subtitles, alignments = "c|cc|ccc|ccc|ccc|ccc", maxRawsPerPage=37)
+    write_table_tex("../res/mip_bounds", "Comparaison entre les bornes obtenues et la valeur optimale", 
+    titles, rows, num_col_titles = [1,2,3,3,3,3], subtitles = subtitles, alignments = "c|cc|ccc|ccc|ccc|ccc", maxRawsPerPage=40)
 end
 
-# test()
 
-#  solve_instances("MIP")
+# solve_instances("MIP")
 # solve_instances("LP")
 # solve_instances("DW1")
 # solve_instances("DW2")
 # solve_instances("Recuit")
-write_table()
+# write_table()
+# performanceDiagram("../res/diagram")

@@ -29,11 +29,12 @@ function test1()
 
 end
 
-function solve_instances(method::String; maxTime::Float64=10.0)
+function solve_instancesYue(method::String; maxTime::Float64=10.0)
     resFolder = "../res/"
     dataFolder = "../data"
 
     # for instanceName in readdir(dataFolder)
+    instanceName = "nobel-us"
 
 
         for num in 1:10
@@ -92,6 +93,13 @@ function solve_instances(method::String; maxTime::Float64=10.0)
         end
     # end
 
+end
+
+
+function testYue()
+    # for inst in ["di-yuan", "pdh", "nobel-us", "polska"]
+        solve_instancesYue("MIP")
+    # end
 end
 
 

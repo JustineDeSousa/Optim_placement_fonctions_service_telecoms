@@ -97,9 +97,7 @@ end
 
 
 function testYue()
-    # for inst in ["di-yuan", "pdh", "nobel-us", "polska"]
-        solve_instancesYue("MIP")
-    # end
+    solve_instancesYue("MIP")
 end
 
 

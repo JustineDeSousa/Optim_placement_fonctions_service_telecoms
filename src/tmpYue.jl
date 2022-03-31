@@ -34,7 +34,7 @@ function solve_instancesYue(method::String; maxTime::Float64=10.0)
     dataFolder = "../data"
 
     # for instanceName in readdir(dataFolder)
-    instanceName = "nobel-us"
+    instanceName = "polska"
 
 
         for num in 1:10
@@ -138,16 +138,17 @@ function test_col_gen1()
     # small test
     global data = Data("test1", 1, true)
 
-    (DW_bound, ite, solved_time) = column_genaration1(data)
-    @info "DW_bound = ", DW_bound
+    # (DW_bound, ite, solved_time) = column_genaration1(data)
+    # @info "DW_bound = ", DW_bound
 
     # println("\nLP bound")
     # (solP, LP_Bound) = cplexSolveMIP(data, true, true)
     # @info "LP_Bound = ", LP_Bound
 
-    # println("\nMIP ")
-    # (solP, obj_v) = cplexSolveMIP(data)
-    # @info "obj_v = ", obj_v
+    println("\nMIP ")
+    (solP, obj_v) = cplexSolveMIP(data)
+    @info "obj_v = ", obj_v
+    # @show solP
 
 
     # big data

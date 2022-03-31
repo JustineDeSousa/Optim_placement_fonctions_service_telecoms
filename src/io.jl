@@ -262,6 +262,7 @@ raw"""\documentclass[main.tex]{subfiles}
 \begin{landscape}
 \begin{table}[h]
     \centering
+\resizebox{\columnwidth}{!}{%
     \begin{tabular}{"""
 
     header *= alignments * "}\n\t\\hline\t\n\t"
@@ -315,7 +316,9 @@ raw"""\documentclass[main.tex]{subfiles}
 
     #FOOTER OF TABLES
     footer = raw"""
-    \end{tabular}\caption{"""
+    \end{tabular}
+}
+\caption{"""
     footer *= caption
     footer *= raw"""}
 \end{table}

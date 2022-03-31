@@ -148,9 +148,9 @@ end
 
 # test()
 
-# solve_instances("MIP")
+ solve_instances("MIP")
 # solve_instances("LP")
 # solve_instances("DW1")
 # solve_instances("DW2")
 # solve_instances("Recuit")
-write_table()
+#write_table()

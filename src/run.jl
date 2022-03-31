@@ -111,7 +111,7 @@ end
 function write_table()
     resFolder = "../res/"
     dataFolder = "../data/"
-    titles = ["Instances", "MIP", "LP", "DW1", "DW2", "recuit"]
+    titles = ["Instances", "PLNE", "LP", "DW1", "DW2", "Recuit Simulé"]
     subtitles = ["", "Temps(s)", "Valeur", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur","GAP", "Temps(s)", "Valeur", "GAP"]
     rows = Vector{String}[]
     for instanceName in readdir(dataFolder)
@@ -127,8 +127,8 @@ function write_table()
                     if method == "MIP/"
                         value_MIP = cost
                     elseif value_MIP > 0
-                        GAP = abs(cost - value_MIP)/value_MIP * 100
-                        push!(results, string(GAP) * "%")
+                        GAP = round(abs(cost - value_MIP)/value_MIP * 100, digits = 2)
+                        push!(results, string(GAP) * "\\%")
                     else
                         push!(results, "-")
                     end
@@ -148,7 +148,7 @@ end
 
 # test()
 
-# solve_instances("MIP")
+#  solve_instances("MIP")
 # solve_instances("LP")
 # solve_instances("DW1")
 # solve_instances("DW2")

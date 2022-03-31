@@ -65,7 +65,7 @@ function solve_instances(method::String; maxTime::Float64=10.0)
             if !isfile(outputFile) #if the instance hasn't been solved already
                 data = Data(instanceName, num)
                 if method == "MIP"
-                    @info "LP : " * instanceName * "_" * string(num)
+                    @info "MIP : " * instanceName * "_" * string(num)
                     @time (paths, cost, resolution_time) = cplexSolveMIP(data)
                     ite = 0
                     functions = []
@@ -149,9 +149,9 @@ end
 
 # test()
 
-# solve_instances("MIP")
+ solve_instances("MIP")
 # solve_instances("LP")
 # solve_instances("DW1")
 # solve_instances("DW2")
 # solve_instances("Recuit")
-write_table()
+#write_table()

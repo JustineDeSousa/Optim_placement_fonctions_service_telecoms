@@ -178,8 +178,4 @@ path = [[[0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0; 0
 functions = Any[]
 cost = 59446.0
 nb_it = 0
-<<<<<<< HEAD
-resolution_time = 1.12
-=======
 resolution_time = 0.43
->>>>>>> f3377995764af19b32ab30d9829c9a30e8560631

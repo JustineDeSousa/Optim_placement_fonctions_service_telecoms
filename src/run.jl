@@ -19,7 +19,6 @@ function test()
         Bestie = orderFunctions(data, bestsol)
         println("Cost Solution 2 : ", costHeuristic(data, Bestie))
     end
-    cplexSolveMIP(data)
 end
 
 

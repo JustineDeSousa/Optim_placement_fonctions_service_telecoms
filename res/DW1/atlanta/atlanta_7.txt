@@ -1,5 +1,0 @@
-path = Any[]
-functions = Any[]
-cost = Inf
-nb_it = Inf
-resolution_time = Inf

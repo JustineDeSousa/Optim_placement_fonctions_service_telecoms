@@ -19,7 +19,6 @@ function test()
         Bestie = orderFunctions(data, bestsol)
         println("Cost Solution 2 : ", costHeuristic(data, Bestie))
     end
-    cplexSolveMIP(data)
 end
 
 
@@ -147,7 +146,7 @@ function write_table()
     write_table_tex("../res/mip_bounds", "Comparaison entre les bornes obtenues et la valeur optimale", titles, rows, num_col_titles = [1,2,3,3,3,3], subtitles = subtitles, alignments = "c|cc|ccc|ccc|ccc|ccc", maxRawsPerPage=37)
 end
 
-test()
+# test()
 
 # solve_instances("MIP")
 # solve_instances("LP")

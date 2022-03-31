@@ -120,7 +120,7 @@ function write_table()
             line = String[instanceName * "\\_" * string(num)]
             for method in ["MIP/", "LP/", "DW1/", "DW2/", "Recuit/"]
                 instance = resFolder * method * instanceName * "/" * instanceName * "_" * string(num) * ".txt"
-                # println(instance)
+                println(instance)
                 if isfile(instance)
                     include(instance)
                     results = [ string(resolution_time), string(cost) ]
@@ -150,7 +150,7 @@ end
 
 # solve_instances("MIP")
 # solve_instances("LP")
-solve_instances("DW1")
+# solve_instances("DW1")
 # solve_instances("DW2")
 # solve_instances("Recuit")
 write_table()

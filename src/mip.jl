@@ -249,11 +249,11 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
             end
         end
 
-        error("No conflict could be found for an infeasible model.")
-    
+        @error "No conflict could be found for an infeasible model."
+        return (solP, Inf, round(solve_time(M), digits=2))
     else
-        return (solP, obj_val, solveTime)
         @error "mip.jl model has no solution ! "
+        return (solP, obj_val, solveTime)
     end
 
 end

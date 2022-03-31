@@ -457,7 +457,7 @@ function recuitSimule(data::Data; tInit::Int64=500, nbIt::Int64=50, phi::Float64
         T = phi * T
     end
     if isFeasible(data, bestSol)
-        return Solution(bestSol, nb_it, time() - start)
+        return Solution(bestSol, data, nb_it, time() - start)
     else
         @time solution = orderFunctions(data, bestSol)
         return Solution(solution, data, nb_it, time() - start)

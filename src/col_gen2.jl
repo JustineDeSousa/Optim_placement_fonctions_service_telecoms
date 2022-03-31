@@ -172,11 +172,11 @@ function master_problem2(data::Data)
         # @show value.(u)
         # @show value.(y)
 
-        for k in 1:data.K, p in 1:sizeP[k]
-            if value(ρ[k, p]) > TOL
-                # @info "k, p, ρ[k, p]", k, p, ρ[k, p]
-            end
-        end
+        # for k in 1:data.K, p in 1:sizeP[k]
+        #     if value(ρ[k, p]) > TOL
+        #         # @info "k, p, ρ[k, p]", k, p, ρ[k, p]
+        #     end
+        # end
 
     elseif MOI.get(MP, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]

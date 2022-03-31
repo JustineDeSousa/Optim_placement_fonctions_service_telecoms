@@ -221,9 +221,9 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
             error("MIP sol isOptimal ? ", isOptimal, " but isFeasible ? ", isFeasible)
         end
 
-        if opt
-            return (solP, obj_val, solveTime)
-        else 
+        # if opt
+        #     return (solP, obj_val, solveTime)
+        # else 
             # return feasible routes
             for k in 1:data.K
                 # χ = zeros(Int, data.N, data.N, data.Layer[k])
@@ -236,7 +236,7 @@ function cplexSolveMIP(data::Data; opt=true, LP=false, verbose=false)
             end
     
             return (solP, obj_val, solveTime)
-        end
+        # end
 
     elseif MOI.get(M, MOI.ConflictStatus()) != MOI.CONFLICT_FOUND
         conflict_constraint_list = ConstraintRef[]

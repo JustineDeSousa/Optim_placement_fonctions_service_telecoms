@@ -121,7 +121,7 @@ function write_table()
             line = String[instanceName * "\\_" * string(num)]
             for method in ["MIP/", "LP/", "DW1/", "DW2/", "Recuit/"]
                 instance = resFolder * method * instanceName * "/" * instanceName * "_" * string(num) * ".txt"
-                # println(instance)
+                println(instance)
                 if isfile(instance)
                     include(instance)
                     results = [ string(resolution_time), string(cost) ]
@@ -147,11 +147,11 @@ function write_table()
     write_table_tex("../res/mip_bounds", "Comparaison entre les bornes obtenues et la valeur optimale", titles, rows, num_col_titles = [1,2,3,3,3,3], subtitles = subtitles, alignments = "c|cc|ccc|ccc|ccc|ccc", maxRawsPerPage=37)
 end
 
-test()
+# test()
 
 # solve_instances("MIP")
 # solve_instances("LP")
-solve_instances("DW1")
+# solve_instances("DW1")
 # solve_instances("DW2")
 # solve_instances("Recuit")
 write_table()
